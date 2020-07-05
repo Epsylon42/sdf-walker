@@ -218,8 +218,10 @@ impl App {
             &PipelineState::default().set_clear_color([0.0, 0.0, 0.0, 1.0]),
             |_, mut shader_gate| {
                 shader_gate.shade(program, |iface, mut render_gate| {
+                    let fov = glm::pi::<f32>() / 2.0;
+
                     iface.aspect.update(size.x / size.y);
-                    iface.fov.update(glm::pi::<f32>() / 2.0);
+                    iface.fov.update(fov);
                     iface.cam.update(glm::quat_to_mat4(&camera).into());
                     iface.cam_pos.update([pos.x, pos.y, pos.z]);
                     iface.light.update([1.0, -1.0, 1.0]);
