@@ -7,29 +7,36 @@ use std::time::Instant;
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
+    linear::M44,
     pipeline::PipelineState,
     render_state::RenderState,
     shader::program::{Program, Uniform},
     tess::{Mode, Tess, TessBuilder, TessSliceIndex},
     texture::Dim2,
-    linear::M44,
 };
-use luminance_derive::{Semantics, Vertex, UniformInterface};
-use luminance_glfw::{Action, GlfwSurface, Key, Surface as _, WindowDim, WindowEvent, WindowOpt, MouseButton, CursorMode};
+use luminance_derive::{Semantics, UniformInterface, Vertex};
+use luminance_glfw::{
+    Action, CursorMode, GlfwSurface, Key, MouseButton, Surface as _, WindowDim, WindowEvent,
+    WindowOpt,
+};
 
 mod shaders;
 
 use shaders::*;
 
-
 fn main() {
-    #[cfg(feature = "embedded")]
-    let provider = EmbeddedLoader;
-
-    #[cfg(not(feature = "embedded"))]
+    #[cfg(feature = "file")]
     let provider = FileLoader {
         vertex: "vertex.glsl".into(),
         fragment: "fragment.glsl".into(),
+    };
+
+    #[cfg(feature = "embedded")]
+    let provider = EmbeddedLoader;
+
+    #[cfg(feature = "generated")]
+    let provider = GeneratedScene {
+        source: "scene.ron".into(),
     };
 
     let mut app = App::new((800, 600), provider);
@@ -67,7 +74,6 @@ const SCREEN: [Vertex; 6] = [
     Vertex {
         idx: VertexIndex::new(2),
     },
-
     Vertex {
         idx: VertexIndex::new(2),
     },
@@ -78,7 +84,6 @@ const SCREEN: [Vertex; 6] = [
         idx: VertexIndex::new(0),
     },
 ];
-
 
 struct App {
     surface: GlfwSurface,
@@ -100,11 +105,9 @@ struct App {
 
 impl App {
     pub fn new((w, h): (u32, u32), shaders: impl ShaderProvider) -> Self {
-        let opt = WindowOpt::default()
-            .set_cursor_mode(CursorMode::Disabled);
+        let opt = WindowOpt::default().set_cursor_mode(CursorMode::Disabled);
 
-        let mut surface =
-            GlfwSurface::new(WindowDim::Windowed(w, h), "sdf-walker", opt).unwrap();
+        let mut surface = GlfwSurface::new(WindowDim::Windowed(w, h), "sdf-walker", opt).unwrap();
 
         let bb = surface.back_buffer().unwrap();
 
@@ -157,7 +160,8 @@ impl App {
 
                     WindowEvent::CursorPos(x, y) => {
                         let cursor = glm::vec2(x as f32, y as f32) * -2.0;
-                        let diff = (cursor - self.prev_cursor.unwrap_or(cursor)).zip_map(&self.size, |a, b| a / b);
+                        let diff = (cursor - self.prev_cursor.unwrap_or(cursor))
+                            .zip_map(&self.size, |a, b| a / b);
                         self.prev_cursor = Some(cursor);
 
                         self.rot += diff;
@@ -174,7 +178,8 @@ impl App {
                             _ => glm::Vec3::zeros(),
                         };
 
-                        self.pos += glm::quat_rotate_vec3(&glm::quat_inverse(&camera), &dir) * delta * 10.0;
+                        self.pos +=
+                            glm::quat_rotate_vec3(&glm::quat_inverse(&camera), &dir) * delta * 10.0;
                     }
 
                     WindowEvent::Close | WindowEvent::Key(Key::Escape, _, Action::Release, _) => {
@@ -205,7 +210,6 @@ impl App {
             size,
 
             pos,
-
             ..
         } = self;
 

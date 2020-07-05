@@ -1,0 +1,45 @@
+(
+    definitions: [
+    (
+        name: "room",
+        args: [
+            ("vec3", "size"),
+            ("vec2", "door"),
+            ("float", "thick")
+        ],
+        definition: Geometry(
+            Diff((
+                    Tf(
+                        pos: (0, "size.y", 0),
+                        geom: Onion(
+                            thick: "thick",
+                            geom: Simple(
+                                name: "box",
+                                args: ["size"]
+                            )
+                        ),
+                    ),
+                    Tf(
+                        pos: ("-size.z + thick/2", "door.y + thick/2", 0),
+                        geom: Simple(
+                            name: "box",
+                            args: [
+                            ("door.x", "door.y", "thick*2")
+                            ]
+                        )
+                    )
+            ))
+            )
+    )
+    ],
+
+    shape: Definition(
+        color: (1.0, 0.0, 0.0),
+        name: "room",
+        args: [
+            (5,5,10),
+            (1.5,3),
+            0.1
+        ]
+    )
+)
