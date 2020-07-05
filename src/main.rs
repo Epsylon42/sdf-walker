@@ -2,6 +2,8 @@
 
 extern crate nalgebra_glm as glm;
 
+use std::time::Instant;
+
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
@@ -13,20 +15,24 @@ use luminance::{
     linear::M44,
 };
 use luminance_derive::{Semantics, Vertex, UniformInterface};
-use luminance_glfw::{Action, GlfwSurface, Key, Surface as _, WindowDim, WindowEvent, WindowOpt, MouseButton};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface as _, WindowDim, WindowEvent, WindowOpt, MouseButton, CursorMode};
 
-use std::fs;
-use std::path::PathBuf;
-use std::time::Instant;
+mod shaders;
+
+use shaders::*;
+
 
 fn main() {
-    let mut app = App::new(
-        (800, 600),
-        &ShaderSrc {
-            vertex: "vertex.glsl".into(),
-            fragment: "fragment.glsl".into(),
-        },
-    );
+    #[cfg(feature = "embedded")]
+    let provider = EmbeddedLoader;
+
+    #[cfg(not(feature = "embedded"))]
+    let provider = FileLoader {
+        vertex: "vertex.glsl".into(),
+        fragment: "fragment.glsl".into(),
+    };
+
+    let mut app = App::new((800, 600), provider);
     app.run();
 }
 
@@ -73,24 +79,6 @@ const SCREEN: [Vertex; 6] = [
     },
 ];
 
-struct ShaderSrc {
-    vertex: PathBuf,
-    fragment: PathBuf,
-}
-
-impl ShaderSrc {
-    pub fn load(&self) -> Program<VertexSemantics, (), Uniforms> {
-        let vertex = fs::read_to_string(&self.vertex).unwrap();
-        let fragment = fs::read_to_string(&self.fragment).unwrap();
-
-        Program::from_strings(None, &vertex, None, &fragment)
-            .map_err(|e| {
-                println!("{}", e);
-            })
-            .unwrap()
-            .ignore_warnings()
-    }
-}
 
 struct App {
     surface: GlfwSurface,
@@ -111,9 +99,9 @@ struct App {
 }
 
 impl App {
-    pub fn new((w, h): (u32, u32), shaders: &ShaderSrc) -> Self {
+    pub fn new((w, h): (u32, u32), shaders: impl ShaderProvider) -> Self {
         let opt = WindowOpt::default()
-            .set_num_samples(4);
+            .set_cursor_mode(CursorMode::Disabled);
 
         let mut surface =
             GlfwSurface::new(WindowDim::Windowed(w, h), "sdf-walker", opt).unwrap();
@@ -130,7 +118,7 @@ impl App {
             surface,
             bb,
             triangle,
-            program: shaders.load(),
+            program: shaders.get(),
 
             size: glm::vec2(w as f32, h as f32),
             prev_cursor: None,
@@ -172,9 +160,7 @@ impl App {
                         let diff = (cursor - self.prev_cursor.unwrap_or(cursor)).zip_map(&self.size, |a, b| a / b);
                         self.prev_cursor = Some(cursor);
 
-                        if self.holding_lmb {
-                            self.rot += diff;
-                        }
+                        self.rot += diff;
                     }
 
                     WindowEvent::Key(key, _, Action::Press | Action::Repeat, _) => {

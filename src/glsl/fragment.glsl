@@ -4,6 +4,8 @@ in vec3 screen_pos;
 uniform vec3 cam_pos;
 uniform vec3 light;
 
+out vec4 frag_color;
+
 vec3 vat(vec3 shift, vec3 p) {
     return p - shift;
 }
@@ -90,7 +92,7 @@ float calc_shadow(vec3 pos) {
     vec3 nlight = -normalize(light);
     vec3 nrm = normal(pos, delta);
 
-    pos += nrm * delta * 8;
+    pos += nrm * delta * 4;
 
     float closest = 1.0;
 
@@ -143,6 +145,6 @@ vec3 march(vec3 pos, vec3 dir) {
 void main() {
     vec3 dir = normalize(screen_pos - cam_pos);
 
-    gl_FragColor.xyz = march(cam_pos, dir);
-    gl_FragColor.w = 1.0;
+    frag_color.xyz = march(cam_pos, dir);
+    frag_color.w = 1.0;
 }
