@@ -83,12 +83,64 @@ float sd_column_aa(vec3 axis, float rad, vec3 p) {
             sd_halfspace_aa(axis, vat(axis * rad, p)), 
             sd_halfspace_aa(-axis, vat(-axis * rad, p)));
 }
+
+mat4 rotate_z(float theta) {
+    float c = cos(theta);
+    float s = sin(theta);
+
+    return mat4(
+        vec4(c, s, 0, 0),
+        vec4(-s, c, 0, 0),
+        vec4(0, 0, 1, 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+
+vec3 mult(mat4 mat, vec3 vec) {
+    vec4 intermediate = mat * vec4(vec, 1);
+    return intermediate.xyz / intermediate.w;
+}
+
+//transparency
+vec4 tp_color(mat4 tp) {
+    return tp[0];
+}
+
+float tp_depth(mat4 tp) {
+    return tp[1].w;
+}
 //library
 
+float sd_ladder(float rad, float width, vec3 p) {
+    mat4 rot = rotate_z(3.1415 / 4);
+
+    vec3 pr = mult(rot, at(0,rad,0, p));
+    pr = repeat(0,rad*2*sqrt(2),0, pr);
+    pr = mult(inverse(rot), pr);
+
+    float ladder = sd_column_aa(vec3(0,0,1), rad, pr);
+
+    float limiter = sd_isect(
+        sd_halfspace_aa(vec3(0,0,1), at(0,0,width*2, p)),
+        sd_halfspace_aa(vec3(0,0,-1), at(0,0,-width*2, p))
+            );
+    
+    return sd_isect(ladder, limiter);
+}
+
+float ladder_with_platform(float rad, float width, vec3 p) {
+    float hs = sd_halfspace(vec3(0,1,0), p);
+
+    float l1 = sd_isect(sd_ladder(rad, width, at(-width+rad,0,0, p)), hs);
+    float l2 = sd_diff(sd_ladder(rad, width, at(width+rad*3,0,0, p)), hs + rad * 2);
+    float platform = sd_box(vec3(width*2,rad,width*2), at(0,-rad,0, p));
+
+    return sd_union(platform, sd_union(l1, l2));
+}
 
 float room(vec3 rsize, vec3 p) {
     vec2 dsize = vec2(1.5, 3);
-    float thick = 0.1;
+    float thick = 0.5;
 
     float shell = sd_onionize(thick, sd_box(rsize, at(0,rsize.y,0, p)));
 
@@ -97,12 +149,20 @@ float room(vec3 rsize, vec3 p) {
     return sd_diff(shell, door);
 }
 
+float prefab_glass_column(vec3 p) {
+    return sd_column_aa(vec3(1,0,0), 2, at(0,5,0, p));
+}
+
+float prefab_room(vec3 p) {
+    return sd_diff(room(vec3(5,5,10), p), prefab_glass_column(p) - 0.1);
+}
+
 vec4 map(vec3 p) {
     //vec3 pl_color = vec3(0.74, 0.93, 1.0);
     vec3 rm_color = vec3(0.9, 0.8, 1.0);
     vec3 col_color = vec3(1.0, 0.98, 0.75);
 
-    vec4 rm = vec4(rm_color, room(vec3(5,5,10), at(10, -3, 10, p)));
+    vec4 rm = vec4(rm_color, prefab_room(at(10, -3, 10, p)));
     vec4 col1 = vec4(rm_color, 
             max(
                 sd_halfspace_aa(vec3(0,1,0), at(0,-3,0, p)), 
@@ -111,10 +171,29 @@ vec4 map(vec3 p) {
     vec4 col = vec4(col_color, 
             sd_column_aa(vec3(0,1,0), 50, repeat(1000,0,1000, at(-160,0,5, p))));
 
-    vec3 walkway_scale = vec3(2,0.1,1);
-    float walkway = sd_column_aa(vec3(0,0,1), 1, at(-5,0,0, p / walkway_scale)) * vmin(walkway_scale);
+    //vec3 walkway_scale = vec3(2,0.1,1);
+    //vec4 walkway = vec4(1,1,1, sd_column_aa(vec3(0,0,1), 1, at(-5,100,0, p / walkway_scale))) * vmin(walkway_scale);
 
-    return csd_union(rm, csd_union(col, csd_union(col1, vec4(1,1,1, walkway))));
+    //float ladder_platform = sd_halfspace(vec3(0,1,0), at(0,-3,0, p));
+    //float ladder1 = sd_isect(sd_ladder(0.5, 1, at(10,-3,-2, p)), ladder_platform);
+    //float ladder2 = sd_diff(sd_ladder(0.5, 1, at(12,-3,-2, p)), ladder_platform + 1);
+
+    //vec4 ladder_shape = vec4(1,1,1, sd_union(ladder1, ladder2));
+    //vec4 ladder = vec4(1,1,1, ladder_with_platform(0.5, 1, at(10,-3,-2, p)));
+
+    return csd_union(rm, csd_union(col, csd_union(col1, vec4(0,0,0, 1.0/0.0))));
+}
+
+mat4 map_transparent(vec3 p) {
+    p = at(10, -3, 10, p);
+    float glass = sd_isect(room(vec3(5,5,10), p), prefab_glass_column(p) - 0.1);
+
+    return mat4(
+            vec4(0.7, 0.7, 1.0, 1.0),
+            vec4(0,0,0, glass),
+            vec4(0),
+            vec4(0)
+            );
 }
 
 vec3 normal(vec3 p, float d) {
@@ -128,10 +207,27 @@ vec3 normal(vec3 p, float d) {
 const int steps = 50;
 const float max_dist = 2000;
 const vec3 ambient = vec3(0.24, 0.09, 0.4);
-const float delta = 0.001;
+const float delta = 0.01;
 const float shadow_coef = 64;
 
-float calc_shadow(vec3 pos) {
+struct Shadow {
+    vec4 color;
+    float shadow;
+};
+
+vec3 color_at(vec3 pos, vec3 background, float opacity, Shadow shadow) {
+    vec3 nlight = -normalize(light);
+    float dist = distance(pos, cam_pos);
+    vec3 nrm = normal(pos, delta);
+
+    vec3 diffuse = mix(map(pos).xyz, shadow.color.xyz, shadow.color.w) * shadow.shadow;
+
+    vec3 color = max(ambient / 2, diffuse);
+    return mix(background, color, opacity);
+}
+
+
+Shadow calc_shadow(vec3 pos) {
     vec3 nlight = -normalize(light);
     vec3 nrm = normal(pos, delta);
 
@@ -139,54 +235,57 @@ float calc_shadow(vec3 pos) {
 
     float closest = 1.0;
 
+    vec4 collected_color = vec4(0);
     for (float t = 0; t < 100;) {
-        float d = map(pos + nlight * t).w;
-        closest = min(closest, shadow_coef * d / t);
-        if (d < delta) {
-            return 0.0;
+        float od = map(pos + nlight * t).w;
+        if (od < delta) {
+            return Shadow(vec4(0), 0);
         }
-        t += d;
+        closest = min(closest, shadow_coef * od / t);
+
+        mat4 transparent = map_transparent(pos + nlight * t);
+        float td = tp_depth(transparent);
+
+        if (td < delta) {
+            collected_color = mix(collected_color, tp_color(transparent), abs(td));
+            t += max(abs(td), delta);
+        } else {
+            t += max(od, delta);
+        }
     }
 
-    return closest;
-}
-
-vec3 color_at(vec3 pos, vec3 background, float opacity, float shadow) {
-    vec3 nlight = -normalize(light);
-    float dist = distance(pos, cam_pos);
-    vec3 nrm = normal(pos, delta);
-
-    //float diffuse = max(0, dot(nrm, nlight)) * shadow;
-    float diffuse = shadow;
-
-    //vec3 specular_vec = reflect(dir, nrm);
-    //float specular = max(0, dot(specular_vec, nlight));
-    float specular = 0;
-
-    vec3 color = max(ambient / 2, map(pos).xyz * diffuse) + vec3(specular);
-    return mix(background, color, opacity);
+    return Shadow(collected_color, closest);
 }
 
 vec3 march(vec3 pos, vec3 dir) {
-    //float adaptive_delta = mix(0.0001, delta, smoothstep(0, 10, map(pos).w));
     vec3 nlight = -normalize(light);
     vec3 background = vec3(pow(max(0, dot(dir, nlight)), 10) * 5) + ambient;
 
     int i = 0;
+    vec4 collected_color = vec4(0.0001);
     for (float t = 0; t < max_dist;) {
         vec4 m = map(pos + dir*t);
-        float adaptive_delta = delta;
-        if (m.w < delta) {
-            float shadow = calc_shadow(pos + dir*t);
+        float od = m.w;
+
+        mat4 transparent = map_transparent(pos + dir*t);
+        float td = tp_depth(transparent);
+
+        if (td < delta) {
+            collected_color = mix(collected_color, tp_color(transparent), abs(td));
+            t += max(abs(td), delta);
+        } else if (od < delta) {
             float itershade = smoothstep(35, 5, i) * 0.5 + 0.5;
-            return color_at(pos + dir*t, background, smoothstep(max_dist, 0, t) * itershade, shadow);
+            float distshade = smoothstep(max_dist, 0, t);
+            vec3 solid_color = color_at(pos + dir*t, background, distshade * itershade, calc_shadow(pos + dir*t));
+            return mix(solid_color, collected_color.xyz, min(1, collected_color.w));
+        } else {
+            t += max(min(od, td), delta);
         }
 
-        t += m.w;
         i += 1;
     }
 
-    return background;
+    return mix(background, collected_color.xyz, collected_color.w);
 }
 
 void main() {

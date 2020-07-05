@@ -173,13 +173,19 @@ impl App {
                             Key::S => glm::vec3(0.0, 0.0, -1.0),
                             Key::A => glm::vec3(-1.0, 0.0, 0.0),
                             Key::D => glm::vec3(1.0, 0.0, 0.0),
-                            Key::E => glm::vec3(0.0, 1.0, 0.0),
-                            Key::Q => glm::vec3(0.0, -1.0, 0.0),
                             _ => glm::Vec3::zeros(),
                         };
 
                         self.pos +=
                             glm::quat_rotate_vec3(&glm::quat_inverse(&camera), &dir) * delta * 10.0;
+
+                        let abs_dir = match key {
+                            Key::E => glm::vec3(0.0, 1.0, 0.0),
+                            Key::Q => glm::vec3(0.0, -1.0, 0.0),
+                            _ => glm::Vec3::zeros(),
+                        };
+
+                        self.pos += abs_dir * delta * 10.0;
                     }
 
                     WindowEvent::Close | WindowEvent::Key(Key::Escape, _, Action::Release, _) => {
