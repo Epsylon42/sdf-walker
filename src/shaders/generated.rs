@@ -5,6 +5,7 @@ use std::path::PathBuf;
 mod desc;
 mod parser;
 mod typed;
+mod codegen;
 
 pub struct GeneratedScene {
     pub source: PathBuf,
@@ -21,16 +22,10 @@ impl ShaderProvider for GeneratedScene {
         let scene_source = std::fs::read(&self.source).unwrap();
         let desc = parser::scene(&scene_source).unwrap().1;
 
-        for stmt in desc.statements {
-            eprintln!("{:#?}", stmt.to_opaque());
-        }
+        let fragment = format!("{}{}{}{}", header, library, dbg!(desc).to_string(), footer);
 
-        todo!();
+        println!("{}", fragment);
 
-        //let fragment = format!("{}{}{}{}", header, library, scene.to_string(), footer);
-
-        //println!("{}", fragment);
-
-        [vertex, String::from("")]
+        [vertex, fragment]
     }
 }

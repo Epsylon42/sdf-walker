@@ -1,7 +1,4 @@
-opaque(1,1,1) {
-    cube(1,1,1);
-    at(1,1,1) intersection {
-        cube(1,1,1);
-        sphere(1)
-    }
+at(0,0,5) opaque(1,1,1) difference {
+    sd_box(vec3(1,1,1));
+    sd_sphere(1.3)
 }

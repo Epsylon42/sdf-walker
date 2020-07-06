@@ -1,8 +1,29 @@
+use super::codegen::Glsl;
 use super::typed::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SceneDesc {
     pub statements: Vec<Statement>
+}
+
+impl ToString for SceneDesc {
+    fn to_string(&self) -> String {
+        let mut glsl = Glsl::new();
+
+        let fold = Statement {
+            name: String::from("union"),
+            args: Vec::new(),
+            body: self.statements.clone()
+        };
+
+        let shape = fold.to_opaque();
+
+        let mut map = glsl.add_function("vec4", "map", &[("vec3", "p")]);
+        let expr = shape.to_expr(&Context::new(), &mut map);
+        map.ret(expr);
+
+        glsl.to_string()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
