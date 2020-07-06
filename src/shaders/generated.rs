@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 mod desc;
 mod parser;
-//mod typed;
+mod typed;
 
 pub struct GeneratedScene {
     pub source: PathBuf,
@@ -18,8 +18,14 @@ impl ShaderProvider for GeneratedScene {
         let library = include_str!("../glsl/library.glsl");
         let footer = include_str!("../glsl/footer.glsl");
 
-        //let scene_source = std::fs::read_to_string(&self.source).unwrap();
-        //let scene: desc::SceneDesc = ron::de::from_str(&scene_source).unwrap();
+        let scene_source = std::fs::read(&self.source).unwrap();
+        let desc = parser::scene(&scene_source).unwrap().1;
+
+        for stmt in desc.statements {
+            eprintln!("{:#?}", stmt.to_opaque());
+        }
+
+        todo!();
 
         //let fragment = format!("{}{}{}{}", header, library, scene.to_string(), footer);
 

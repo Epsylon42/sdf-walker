@@ -1,0 +1,7 @@
+opaque(1,1,1) {
+    cube(1,1,1);
+    at(1,1,1) intersection {
+        cube(1,1,1);
+        sphere(1)
+    }
+}

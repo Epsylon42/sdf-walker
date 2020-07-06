@@ -1,4 +1,5 @@
 #![feature(or_patterns)]
+#![feature(box_syntax)]
 
 extern crate nalgebra_glm as glm;
 
@@ -36,7 +37,7 @@ fn main() {
 
     #[cfg(feature = "generated")]
     let provider = GeneratedScene {
-        source: "scene.ron".into(),
+        source: "test.scene".into(),
     };
 
     let mut app = App::new((800, 600), provider);
