@@ -31,6 +31,15 @@ vec3 repeat(float x, float y, float z, vec3 p) {
     return vrepeat(vec3(x,y,z), p);
 }
 
+vec3 rotate_z(float theta, vec3 p) {
+    float c = cos(theta);
+    float s = sin(theta);
+
+    return vec3(
+            p.x*c - p.y*s,
+            p.x*s + p.y*c,
+            p.z);
+}
 
 // shape transforms
 float sd_union(float a, float b) {
@@ -84,39 +93,25 @@ float sd_column_aa(vec3 axis, float rad, vec3 p) {
             sd_halfspace_aa(-axis, vat(-axis * rad, p)));
 }
 
-mat4 rotate_z(float theta) {
-    float c = cos(theta);
-    float s = sin(theta);
-
-    return mat4(
-        vec4(c, s, 0, 0),
-        vec4(-s, c, 0, 0),
-        vec4(0, 0, 1, 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-
-vec3 mult(mat4 mat, vec3 vec) {
-    vec4 intermediate = mat * vec4(vec, 1);
-    return intermediate.xyz / intermediate.w;
-}
-
 //transparency
-vec4 tp_color(mat4 tp) {
-    return tp[0];
-}
+struct MapTransparent {
+    vec4 color;
+    float d;
+};
 
-float tp_depth(mat4 tp) {
-    return tp[1].w;
+vec3 apply_mask(vec3 color, vec3 mask) {
+    if (length(1 - mask) > 1) {
+        mask = normalize(mask);
+    }
+    return color * mask;
 }
 //library
 
 float sd_ladder(float rad, float width, vec3 p) {
-    mat4 rot = rotate_z(3.1415 / 4);
 
-    vec3 pr = mult(rot, at(0,rad,0, p));
+    vec3 pr = rotate_z(3.1415 / 4, p);
     pr = repeat(0,rad*2*sqrt(2),0, pr);
-    pr = mult(inverse(rot), pr);
+    pr = rotate_z(-3.1415 / 4, pr);
 
     float ladder = sd_column_aa(vec3(0,0,1), rad, pr);
 
@@ -158,7 +153,6 @@ float prefab_room(vec3 p) {
 }
 
 vec4 map(vec3 p) {
-    //vec3 pl_color = vec3(0.74, 0.93, 1.0);
     vec3 rm_color = vec3(0.9, 0.8, 1.0);
     vec3 col_color = vec3(1.0, 0.98, 0.75);
 
@@ -174,26 +168,16 @@ vec4 map(vec3 p) {
     //vec3 walkway_scale = vec3(2,0.1,1);
     //vec4 walkway = vec4(1,1,1, sd_column_aa(vec3(0,0,1), 1, at(-5,100,0, p / walkway_scale))) * vmin(walkway_scale);
 
-    //float ladder_platform = sd_halfspace(vec3(0,1,0), at(0,-3,0, p));
-    //float ladder1 = sd_isect(sd_ladder(0.5, 1, at(10,-3,-2, p)), ladder_platform);
-    //float ladder2 = sd_diff(sd_ladder(0.5, 1, at(12,-3,-2, p)), ladder_platform + 1);
+    vec4 ladder = vec4(1,1,1, ladder_with_platform(0.5, 1, at(10,-3,-2, p)));
 
-    //vec4 ladder_shape = vec4(1,1,1, sd_union(ladder1, ladder2));
-    //vec4 ladder = vec4(1,1,1, ladder_with_platform(0.5, 1, at(10,-3,-2, p)));
-
-    return csd_union(rm, csd_union(col, csd_union(col1, vec4(0,0,0, 1.0/0.0))));
+    return csd_union(rm, csd_union(col, csd_union(col1, ladder)));
 }
 
-mat4 map_transparent(vec3 p) {
+MapTransparent map_transparent(vec3 p) {
     p = at(10, -3, 10, p);
     float glass = sd_isect(room(vec3(5,5,10), p), prefab_glass_column(p) - 0.1);
 
-    return mat4(
-            vec4(0.7, 0.7, 1.0, 1.0),
-            vec4(0,0,0, glass),
-            vec4(0),
-            vec4(0)
-            );
+    return MapTransparent(vec4(0.1, 0.1 ,0.05 , 5.0), glass);
 }
 
 vec3 normal(vec3 p, float d) {
@@ -211,7 +195,7 @@ const float delta = 0.01;
 const float shadow_coef = 64;
 
 struct Shadow {
-    vec4 color;
+    vec3 mask;
     float shadow;
 };
 
@@ -220,10 +204,9 @@ vec3 color_at(vec3 pos, vec3 background, float opacity, Shadow shadow) {
     float dist = distance(pos, cam_pos);
     vec3 nrm = normal(pos, delta);
 
-    vec3 diffuse = mix(map(pos).xyz, shadow.color.xyz, shadow.color.w) * shadow.shadow;
+    vec3 diffuse = apply_mask(map(pos).xyz, shadow.mask) * shadow.shadow;
 
-    vec3 color = max(ambient / 2, diffuse);
-    return mix(background, color, opacity);
+    return mix(background, max(ambient/2, diffuse), opacity);
 }
 
 
@@ -235,26 +218,25 @@ Shadow calc_shadow(vec3 pos) {
 
     float closest = 1.0;
 
-    vec4 collected_color = vec4(0);
+    vec3 mask = vec3(1);
     for (float t = 0; t < 100;) {
         float od = map(pos + nlight * t).w;
         if (od < delta) {
-            return Shadow(vec4(0), 0);
+            return Shadow(vec3(1), 0);
         }
         closest = min(closest, shadow_coef * od / t);
 
-        mat4 transparent = map_transparent(pos + nlight * t);
-        float td = tp_depth(transparent);
+        MapTransparent transparent = map_transparent(pos + nlight * t);
 
-        if (td < delta) {
-            collected_color = mix(collected_color, tp_color(transparent), abs(td));
-            t += max(abs(td), delta);
+        if (transparent.d < delta) {
+            mask -= transparent.color.xyz * transparent.color.w * abs(transparent.d);
+            t += max(abs(transparent.d), delta);
         } else {
             t += max(od, delta);
         }
     }
 
-    return Shadow(collected_color, closest);
+    return Shadow(mask, closest);
 }
 
 vec3 march(vec3 pos, vec3 dir) {
@@ -262,30 +244,29 @@ vec3 march(vec3 pos, vec3 dir) {
     vec3 background = vec3(pow(max(0, dot(dir, nlight)), 10) * 5) + ambient;
 
     int i = 0;
-    vec4 collected_color = vec4(0.0001);
+    vec3 mask = vec3(1);
     for (float t = 0; t < max_dist;) {
         vec4 m = map(pos + dir*t);
         float od = m.w;
 
-        mat4 transparent = map_transparent(pos + dir*t);
-        float td = tp_depth(transparent);
+        MapTransparent transparent = map_transparent(pos + dir*t);
 
-        if (td < delta) {
-            collected_color = mix(collected_color, tp_color(transparent), abs(td));
-            t += max(abs(td), delta);
+        if (transparent.d < delta) {
+            mask -= transparent.color.xyz * transparent.color.w * abs(transparent.d);
+            t += max(abs(transparent.d), delta);
         } else if (od < delta) {
             float itershade = smoothstep(35, 5, i) * 0.5 + 0.5;
             float distshade = smoothstep(max_dist, 0, t);
             vec3 solid_color = color_at(pos + dir*t, background, distshade * itershade, calc_shadow(pos + dir*t));
-            return mix(solid_color, collected_color.xyz, min(1, collected_color.w));
+            return apply_mask(solid_color, mask);
         } else {
-            t += max(min(od, td), delta);
+            t += max(min(od, transparent.d), delta);
         }
 
         i += 1;
     }
 
-    return mix(background, collected_color.xyz, collected_color.w);
+    return apply_mask(background, mask);
 }
 
 void main() {
