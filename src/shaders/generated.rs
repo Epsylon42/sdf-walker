@@ -2,8 +2,9 @@ use super::ShaderProvider;
 
 use std::path::PathBuf;
 
-mod codegen;
 mod desc;
+mod parser;
+//mod typed;
 
 pub struct GeneratedScene {
     pub source: PathBuf,
@@ -17,13 +18,13 @@ impl ShaderProvider for GeneratedScene {
         let library = include_str!("../glsl/library.glsl");
         let footer = include_str!("../glsl/footer.glsl");
 
-        let scene_source = std::fs::read_to_string(&self.source).unwrap();
-        let scene: desc::SceneDesc = ron::de::from_str(&scene_source).unwrap();
+        //let scene_source = std::fs::read_to_string(&self.source).unwrap();
+        //let scene: desc::SceneDesc = ron::de::from_str(&scene_source).unwrap();
 
-        let fragment = format!("{}{}{}{}", header, library, scene.to_string(), footer);
+        //let fragment = format!("{}{}{}{}", header, library, scene.to_string(), footer);
 
-        println!("{}", fragment);
+        //println!("{}", fragment);
 
-        [vertex, fragment]
+        [vertex, String::from("")]
     }
 }
