@@ -3,7 +3,7 @@ use super::typed::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SceneDesc {
-    pub statements: Vec<Statement>
+    pub statements: Vec<Statement>,
 }
 
 impl ToString for SceneDesc {
@@ -13,7 +13,7 @@ impl ToString for SceneDesc {
         let fold = Statement {
             name: String::from("union"),
             args: Vec::new(),
-            body: self.statements.clone()
+            body: self.statements.clone(),
         };
 
         let shape = fold.to_opaque();
@@ -35,21 +35,20 @@ pub struct Statement {
 
 impl ToString for Statement {
     fn to_string(&self) -> String {
-        let body = self.body
-            .iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>();
+        let body = self.body.iter().map(|s| s.to_string()).collect::<Vec<_>>();
 
-        format!("{}({}){{{}}}", self.name, self.args.join(", "), body.join("; "))
+        format!(
+            "{}({}){{{}}}",
+            self.name,
+            self.args.join(", "),
+            body.join("; ")
+        )
     }
 }
 
 impl Statement {
     fn map_body<T>(&self, func: impl Fn(&Statement) -> T) -> Vec<T> {
-        self.body
-            .iter()
-            .map(func)
-            .collect()
+        self.body.iter().map(func).collect()
     }
 
     pub fn to_geometry(&self) -> Box<dyn IGeometry> {
@@ -86,12 +85,12 @@ impl Statement {
 
                 box Transform {
                     tf: At {
-                        args: self.args.clone()
+                        args: self.args.clone(),
                     },
                     item: Fold {
                         func: Union,
                         items: self.map_body(Self::to_geometry),
-                    }
+                    },
                 }
             }
 
@@ -100,7 +99,7 @@ impl Statement {
 
                 box Geometry {
                     name: self.name.clone(),
-                    args: self.args.clone()
+                    args: self.args.clone(),
                 }
             }
         }
@@ -140,26 +139,30 @@ impl Statement {
 
                 box Transform {
                     tf: At {
-                        args: self.args.clone()
+                        args: self.args.clone(),
                     },
                     item: Fold {
                         func: Union,
                         items: self.map_body(Self::to_opaque),
-                    }
+                    },
                 }
             }
 
             "opaque" => {
                 assert!(self.args.len() == 3);
 
-                let color = [self.args[0].clone(), self.args[1].clone(), self.args[2].clone()];
+                let color = [
+                    self.args[0].clone(),
+                    self.args[1].clone(),
+                    self.args[2].clone(),
+                ];
 
                 box OpaqueShape {
                     color,
                     geometry: Fold {
                         func: Union,
-                        items: self.map_body(Self::to_geometry)
-                    }
+                        items: self.map_body(Self::to_geometry),
+                    },
                 }
             }
 
@@ -168,7 +171,7 @@ impl Statement {
 
                 box NamedOpaqueShape {
                     name: self.name.clone(),
-                    args: self.args.clone()
+                    args: self.args.clone(),
                 }
             }
         }

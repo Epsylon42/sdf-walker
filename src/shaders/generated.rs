@@ -2,10 +2,10 @@ use super::ShaderProvider;
 
 use std::path::PathBuf;
 
+mod codegen;
 mod desc;
 mod parser;
 mod typed;
-mod codegen;
 
 pub struct GeneratedScene {
     pub source: PathBuf,

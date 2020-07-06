@@ -1,37 +1,30 @@
 use super::desc::*;
 
 use nom::{
-    IResult,
-    character::{complete as character, is_alphabetic, is_alphanumeric},
-    bytes::complete as bytes,
-    combinator::*,
-    sequence::{tuple, delimited},
-    multi::{separated_list, many1},
     branch::alt,
+    bytes::complete as bytes,
+    character::{complete as character, is_alphabetic, is_alphanumeric},
+    combinator::*,
+    multi::{many1, separated_list},
+    sequence::{delimited, tuple},
+    IResult,
 };
 
 pub fn scene(i: &[u8]) -> IResult<&[u8], SceneDesc> {
     map(
-        separated_list(
-            ws(character::char(';')),
-            statement
-        ),
-        |statements| SceneDesc { statements } 
+        separated_list(ws(character::char(';')), statement),
+        |statements| SceneDesc { statements },
     )(i)
 }
 
 fn statement(i: &[u8]) -> IResult<&[u8], Statement> {
     map(
-        tuple((
-            ident,
-            opt(args),
-            opt(body)
-        )),
-        |(name, args, body)| Statement { 
-            name, 
+        tuple((ident, opt(args), opt(body))),
+        |(name, args, body)| Statement {
+            name,
             args: args.unwrap_or_default(),
-            body: body.unwrap_or_default()
-        }
+            body: body.unwrap_or_default(),
+        },
     )(i)
 }
 
@@ -39,34 +32,27 @@ fn body(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
     alt((
         delimited(
             ws(character::char('{')),
-            separated_list(
-                ws(character::char(';')),
-                statement
-            ),
+            separated_list(ws(character::char(';')), statement),
             ws(character::char('}')),
         ),
-        map(statement, |stmt| vec![stmt])
+        map(statement, |stmt| vec![stmt]),
     ))(i)
 }
 
 fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        many1(
-            alt((
-                    simple_value,
-                    map(args, |args| format!("({})", args.join(", ")))
-            ))
-        ),
-        |parts| parts.join("")
+        many1(alt((
+            simple_value,
+            map(args, |args| format!("({})", args.join(", "))),
+        ))),
+        |parts| parts.join(""),
     )(i)
 }
 
 fn simple_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        bytes::take_while1(|b| {
-            is_alphanumeric(b) || b == b'.' || b == b'_'
-        }),
-        |b: &[u8]| String::from_utf8(b.to_owned()).unwrap()
+        bytes::take_while1(|b| is_alphanumeric(b) || b == b'.' || b == b'_'),
+        |b: &[u8]| String::from_utf8(b.to_owned()).unwrap(),
     )(i)
 }
 
@@ -74,34 +60,31 @@ fn ident(i: &[u8]) -> IResult<&[u8], String> {
     map(
         tuple((
             peek(verify(bytes::take(1usize), |b: &[u8]| is_alphabetic(b[0]))),
-            bytes::take_while1(|b| is_alphanumeric(b) || b == b'_')
+            bytes::take_while1(|b| is_alphanumeric(b) || b == b'_'),
         )),
-        |(_, ident): (_, &[u8])| String::from_utf8(ident.to_owned()).unwrap()
+        |(_, ident): (_, &[u8])| String::from_utf8(ident.to_owned()).unwrap(),
     )(i)
 }
 
 fn args(i: &[u8]) -> IResult<&[u8], Vec<String>> {
     delimited(
         ws(character::char('(')),
-        separated_list(
-            ws(character::char(',')),
-            complex_value
-        ),
-        ws(character::char(')'))
+        separated_list(ws(character::char(',')), complex_value),
+        ws(character::char(')')),
     )(i)
 }
 
-fn ws<'a, O, E, P>(parser: P) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E> 
-    where E: nom::error::ParseError<&'a [u8]>,
-          P: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+fn ws<'a, O, E, P>(parser: P) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+where
+    E: nom::error::ParseError<&'a [u8]>,
+    P: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
 {
     delimited(
         bytes::take_while(|b| b == b' ' || b == b'\t' || b == b'\n'),
         parser,
-        bytes::take_while(|b| b == b' ' || b == b'\t' || b == b'\n')
+        bytes::take_while(|b| b == b' ' || b == b'\t' || b == b'\n'),
     )
 }
-
 
 #[cfg(test)]
 mod test {
@@ -125,15 +108,30 @@ mod test {
     #[test]
     fn test_complex_value() {
         assert_eq!(complex_value(b"vec3(1,2,3)").unwrap().1, "vec3(1, 2, 3)");
-        assert_eq!(complex_value(b"vec3(1,2,vec2(1))").unwrap().1, "vec3(1, 2, vec2(1))");
-        assert_eq!(complex_value(b"vec3(1, 2, vec2(1))").unwrap().1, "vec3(1, 2, vec2(1))");
-        assert_eq!(complex_value(b"vec3(1 , 2 , vec2(1))").unwrap().1, "vec3(1, 2, vec2(1))");
+        assert_eq!(
+            complex_value(b"vec3(1,2,vec2(1))").unwrap().1,
+            "vec3(1, 2, vec2(1))"
+        );
+        assert_eq!(
+            complex_value(b"vec3(1, 2, vec2(1))").unwrap().1,
+            "vec3(1, 2, vec2(1))"
+        );
+        assert_eq!(
+            complex_value(b"vec3(1 , 2 , vec2(1))").unwrap().1,
+            "vec3(1, 2, vec2(1))"
+        );
     }
 
     #[test]
     fn test_args() {
-        assert_eq!(args(b"(1,hello,vec3(5))").unwrap().1, &["1", "hello", "vec3(5)"]);
-        assert_eq!(args(b"(1, hello, vec3(5))").unwrap().1, &["1", "hello", "vec3(5)"]);
+        assert_eq!(
+            args(b"(1,hello,vec3(5))").unwrap().1,
+            &["1", "hello", "vec3(5)"]
+        );
+        assert_eq!(
+            args(b"(1, hello, vec3(5))").unwrap().1,
+            &["1", "hello", "vec3(5)"]
+        );
     }
 
     #[test]
@@ -161,13 +159,18 @@ mod test {
             world();
             at(1, 2, 3) { cube() }
         }
-        "#.trim();
+        "#
+        .trim();
         let stmt = all_consuming(statement)(s.as_bytes()).unwrap().1;
-        assert_eq!(stmt.to_string(), "hello(){world(){}; at(1, 2, 3){cube(){}}}");
+        assert_eq!(
+            stmt.to_string(),
+            "hello(){world(){}; at(1, 2, 3){cube(){}}}"
+        );
 
         let s = r#"
         at(1,2,3) scale(4,5,6) { cube() }
-        "#.trim();
+        "#
+        .trim();
         let stmt = all_consuming(statement)(s.as_bytes()).unwrap().1;
         assert_eq!(stmt.to_string(), "at(1, 2, 3){scale(4, 5, 6){cube(){}}}");
 

@@ -1,6 +1,6 @@
 pub struct Glsl {
     uniq: usize,
-    functions: Vec<String>
+    functions: Vec<String>,
 }
 
 impl Glsl {
@@ -11,7 +11,12 @@ impl Glsl {
         }
     }
 
-    pub fn add_function(&mut self, typ: impl ToString, name: impl ToString, args: &[(impl ToString, impl ToString)]) -> Function {
+    pub fn add_function(
+        &mut self,
+        typ: impl ToString,
+        name: impl ToString,
+        args: &[(impl ToString, impl ToString)],
+    ) -> Function {
         Function {
             glsl: self,
             ret: typ.to_string(),
@@ -20,7 +25,7 @@ impl Glsl {
                 .into_iter()
                 .map(|(a, b)| (a.to_string(), b.to_string()))
                 .collect(),
-            definitions: Vec::new()
+            definitions: Vec::new(),
         }
     }
 }
@@ -51,7 +56,8 @@ impl<'a> Function<'a> {
     }
 
     pub fn ret(self, expr: impl ToString) {
-        let args = self.args
+        let args = self
+            .args
             .into_iter()
             .map(|(typ, name)| format!("{} {}", typ, name))
             .collect::<Vec<_>>();
@@ -62,7 +68,9 @@ impl<'a> Function<'a> {
 
         let ret = format!("return {};", expr.to_string());
 
-        self.glsl.functions.push(format!("{}\n{}\n{}\n}}", fst, definitions, ret));
+        self.glsl
+            .functions
+            .push(format!("{}\n{}\n{}\n}}", fst, definitions, ret));
     }
 }
 
@@ -116,7 +124,7 @@ impl FunctionCall {
     pub fn new(name: impl ToString) -> Self {
         FunctionCall {
             name: name.to_string(),
-            args: Vec::new()
+            args: Vec::new(),
         }
     }
 

@@ -2,21 +2,21 @@ use std::fmt::Debug;
 
 use super::codegen as glsl;
 
-
 pub struct Context {
     p: String,
 }
 
 impl Context {
     pub fn new() -> Self {
-        Context { p: String::from("p") }
+        Context {
+            p: String::from("p"),
+        }
     }
 
     fn with_p(p: String) -> Self {
         Context { p }
     }
 }
-
 
 pub trait IGeometry: Debug {
     fn to_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr;
@@ -31,7 +31,7 @@ impl IGeometry for Box<dyn IGeometry> {
 #[derive(Debug)]
 pub struct Geometry {
     pub name: String,
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 impl IGeometry for Geometry {
@@ -46,7 +46,6 @@ impl IGeometry for Geometry {
         func.into()
     }
 }
-
 
 pub trait IOpaqueShape: Debug {
     fn to_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr;
@@ -80,7 +79,7 @@ impl<G: IGeometry> IOpaqueShape for OpaqueShape<G> {
 #[derive(Debug)]
 pub struct NamedOpaqueShape {
     pub name: String,
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 impl IOpaqueShape for NamedOpaqueShape {
@@ -96,11 +95,10 @@ impl IOpaqueShape for NamedOpaqueShape {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Fold<F, T> {
     pub func: F,
-    pub items: Vec<T>
+    pub items: Vec<T>,
 }
 
 impl<T: IGeometry, F: IFunc> IGeometry for Fold<F, T> {
@@ -143,7 +141,6 @@ impl<T: IOpaqueShape, F: IFunc> IOpaqueShape for Fold<F, T> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Transform<F, T> {
     pub tf: F,
@@ -163,8 +160,6 @@ impl<F: ITransform, T: IOpaqueShape> IOpaqueShape for Transform<F, T> {
         self.item.to_expr(&ctx, func)
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct Union;
@@ -197,7 +192,7 @@ impl IFunc for Diff {
 
 #[derive(Debug)]
 pub struct At {
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 pub trait ITransform: Debug {
@@ -211,7 +206,7 @@ impl ITransform for At {
             at.push_arg(arg.as_str().into());
         }
         at.push_arg(ctx.p.as_str().into());
-        
+
         let ident = func.gen_definition("vec3", glsl::Expr::from(at));
         Context::with_p(ident)
     }
