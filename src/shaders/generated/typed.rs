@@ -18,7 +18,7 @@ impl Context {
     }
 }
 
-pub trait IGeometry: Debug {
+pub trait IGeometry: Debug + 'static {
     fn to_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr;
 }
 
@@ -47,7 +47,7 @@ impl IGeometry for Geometry {
     }
 }
 
-pub trait IOpaqueShape: Debug {
+pub trait IOpaqueShape: Debug + 'static {
     fn to_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr;
 }
 
@@ -59,7 +59,7 @@ impl IOpaqueShape for Box<dyn IOpaqueShape> {
 
 #[derive(Debug)]
 pub struct OpaqueShape<G: IGeometry> {
-    pub color: [String; 3],
+    pub color: Vec<String>,
     pub geometry: G,
 }
 
@@ -168,7 +168,7 @@ pub struct Isect;
 #[derive(Debug)]
 pub struct Diff;
 
-pub trait IFunc: Debug {
+pub trait IFunc: Debug + 'static {
     const GEOM: &'static str;
     const OPAQ: &'static str;
     const ID: &'static str;
@@ -195,7 +195,7 @@ pub struct At {
     pub args: Vec<String>,
 }
 
-pub trait ITransform: Debug {
+pub trait ITransform: Debug + 'static {
     fn create(&self, ctx: &Context, func: &mut glsl::Function) -> Context;
 }
 

@@ -16,7 +16,7 @@ impl ToString for SceneDesc {
             body: self.statements.clone(),
         };
 
-        let shape = fold.to_opaque();
+        let shape = fold.visit(&OpaqueVisitor).unwrap();
 
         let mut map = glsl.add_function("vec4", "map", &[("vec3", "p")]);
         let expr = shape.to_expr(&Context::new(), &mut map);
@@ -46,134 +46,119 @@ impl ToString for Statement {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct StatementError(String);
+
 impl Statement {
-    fn map_body<T>(&self, func: impl Fn(&Statement) -> T) -> Vec<T> {
-        self.body.iter().map(func).collect()
-    }
-
-    pub fn to_geometry(&self) -> Box<dyn IGeometry> {
-        match self.name.as_str() {
+    pub fn visit<V: StatementVisitor + ?Sized>(
+        &self,
+        vis: &V,
+    ) -> Result<V::Output, StatementError> {
+        let x = match self.name.as_str() {
             "union" => {
                 assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Union,
-                    items: self.map_body(Self::to_geometry),
-                }
+                vis.construct_fold(Union, vis.visit_body(self)?)
             }
 
             "intersection" => {
                 assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Isect,
-                    items: self.map_body(Self::to_geometry),
-                }
+                vis.construct_fold(Isect, vis.visit_body(self)?)
             }
 
             "difference" => {
                 assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Diff,
-                    items: self.map_body(Self::to_geometry),
-                }
-            }
-
-            "at" => {
-                assert!(self.args.len() == 1 || self.args.len() == 3);
-
-                box Transform {
-                    tf: At {
-                        args: self.args.clone(),
-                    },
-                    item: Fold {
-                        func: Union,
-                        items: self.map_body(Self::to_geometry),
-                    },
-                }
-            }
-
-            _ => {
-                assert!(self.body.is_empty());
-
-                box Geometry {
-                    name: self.name.clone(),
-                    args: self.args.clone(),
-                }
-            }
-        }
-    }
-
-    pub fn to_opaque(&self) -> Box<dyn IOpaqueShape> {
-        match self.name.as_str() {
-            "union" => {
-                assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Union,
-                    items: self.map_body(Self::to_opaque),
-                }
-            }
-
-            "intersection" => {
-                assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Isect,
-                    items: self.map_body(Self::to_opaque),
-                }
-            }
-
-            "difference" => {
-                assert!(self.args.is_empty());
-
-                box Fold {
-                    func: Diff,
-                    items: self.map_body(Self::to_opaque),
-                }
-            }
-
-            "at" => {
-                assert!(self.args.len() == 1 || self.args.len() == 3);
-
-                box Transform {
-                    tf: At {
-                        args: self.args.clone(),
-                    },
-                    item: Fold {
-                        func: Union,
-                        items: self.map_body(Self::to_opaque),
-                    },
-                }
+                vis.construct_fold(Diff, vis.visit_body(self)?)
             }
 
             "opaque" => {
-                assert!(self.args.len() == 3);
+                let geom = GeometryVisitor;
 
-                let color = [
-                    self.args[0].clone(),
-                    self.args[1].clone(),
-                    self.args[2].clone(),
-                ];
+                vis.construct_opaque(
+                    self.args.clone(),
+                    geom.construct_fold(Union, geom.visit_body(self)?),
+                )?
+            }
 
-                box OpaqueShape {
-                    color,
-                    geometry: Fold {
-                        func: Union,
-                        items: self.map_body(Self::to_geometry),
+            "at" => {
+                assert!(self.args.len() == 1 || self.args.len() == 3);
+                vis.construct_transform(
+                    At {
+                        args: self.args.clone(),
                     },
-                }
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
             }
 
             _ => {
                 assert!(self.body.is_empty());
-
-                box NamedOpaqueShape {
-                    name: self.name.clone(),
-                    args: self.args.clone(),
-                }
+                vis.construct_named(self.name.clone(), self.args.clone())
             }
-        }
+        };
+
+        Ok(x)
+    }
+}
+
+pub trait StatementVisitor {
+    type Output;
+
+    fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output;
+    fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output;
+    fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output;
+
+    fn construct_opaque(
+        &self,
+        _color: Vec<String>,
+        _geometry: impl IGeometry,
+    ) -> Result<Self::Output, StatementError> {
+        Err(StatementError(String::from(
+            "cannot construct opaque shape",
+        )))
+    }
+
+    fn visit_body(&self, stmt: &Statement) -> Result<Vec<Self::Output>, StatementError> {
+        stmt.body.iter().map(|stmt| stmt.visit(self)).collect()
+    }
+}
+
+pub struct GeometryVisitor;
+impl StatementVisitor for GeometryVisitor {
+    type Output = Box<dyn IGeometry>;
+
+    fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
+        box Geometry { name, args }
+    }
+
+    fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
+        box Fold { func, items }
+    }
+
+    fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
+        box Transform { tf, item }
+    }
+}
+
+pub struct OpaqueVisitor;
+impl StatementVisitor for OpaqueVisitor {
+    type Output = Box<dyn IOpaqueShape>;
+
+    fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
+        box NamedOpaqueShape { name, args }
+    }
+
+    fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
+        box Fold { func, items }
+    }
+
+    fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
+        box Transform { tf, item }
+    }
+
+    fn construct_opaque(
+        &self,
+        color: Vec<String>,
+        geometry: impl IGeometry,
+    ) -> Result<Self::Output, StatementError> {
+        Ok(box OpaqueShape { color, geometry })
     }
 }

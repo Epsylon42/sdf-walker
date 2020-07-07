@@ -74,20 +74,17 @@ fn args(i: &[u8]) -> IResult<&[u8], Vec<String>> {
     )(i)
 }
 
-fn separated_list_terminated<'a, 'b, O1: 'b, O2: 'b, E: 'b, P1: 'b, P2: 'b>(sep: &'b P1, parser: P2) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O2>, E> + 'b
-    where E: nom::error::ParseError<&'a [u8]>,
-          P1: Fn(&'a [u8]) -> IResult<&'a [u8], O1, E>,
-          P2: Fn(&'a [u8]) -> IResult<&'a [u8], O2, E>,
-          'a: 'b
-
+fn separated_list_terminated<'a, 'b, O1: 'b, O2: 'b, E: 'b, P1: 'b, P2: 'b>(
+    sep: &'b P1,
+    parser: P2,
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O2>, E> + 'b
+where
+    E: nom::error::ParseError<&'a [u8]>,
+    P1: Fn(&'a [u8]) -> IResult<&'a [u8], O1, E>,
+    P2: Fn(&'a [u8]) -> IResult<&'a [u8], O2, E>,
+    'a: 'b,
 {
-    map(
-        tuple((
-                separated_list(sep, parser),
-                opt(sep)
-        )),
-        |(a, _)| a
-    )
+    map(tuple((separated_list(sep, parser), opt(sep))), |(a, _)| a)
 }
 
 fn ws<'a, O, E, P>(parser: P) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
