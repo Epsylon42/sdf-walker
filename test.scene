@@ -1,3 +1,13 @@
+define_geometry(room, vec3 size, vec2 door, float thick)
+at(0,size.y,0)
+difference {
+    onionize(thick) sd_box(size);
+    at(0, door.y + thick, -door.z, thick) sd_box(vec3(door, thick*2));
+};
+
+
+at(10,-3,10) opaque(1,1,1) room(vec3(5,5,10), vec2(1.5,3), 0.5);
+
 at(0,0,5) opaque(1,1,1) difference {
     sd_box(vec3(1,1,1));
     sd_sphere(1.3);

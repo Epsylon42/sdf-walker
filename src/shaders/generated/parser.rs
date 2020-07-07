@@ -12,7 +12,7 @@ use nom::{
 
 pub fn scene(i: &[u8]) -> IResult<&[u8], SceneDesc> {
     map(
-        separated_list(ws(character::char(';')), statement),
+        all_consuming(separated_list_terminated(&ws(character::char(';')), statement)),
         |statements| SceneDesc { statements },
     )(i)
 }
@@ -41,18 +41,23 @@ fn body(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
 
 fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        many1(alt((
-            simple_value,
-            map(args, |args| format!("({})", args.join(", "))),
-        ))),
+        many1(
+            ws(
+                alt((
+                        simple_value,
+                        map(bytes::is_a("+-*/"), |b: &[u8]| String::from_utf8(b.to_owned()).unwrap()),
+                        map(args, |args| format!("({})", args.join(", "))),
+                ))
+            )
+        ),
         |parts| parts.join(""),
     )(i)
 }
 
 fn simple_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        bytes::take_while1(|b| is_alphanumeric(b) || b == b'.' || b == b'_'),
-        |b: &[u8]| String::from_utf8(b.to_owned()).unwrap(),
+        bytes::take_while1(|b| is_alphanumeric(b) || b == b'.' || b == b'_' || b == b' '),
+        |b: &[u8]| std::str::from_utf8(b).unwrap().trim().to_owned(),
     )(i)
 }
 

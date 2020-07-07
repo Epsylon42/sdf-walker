@@ -19,7 +19,7 @@ impl ToString for SceneDesc {
         let shape = fold.visit(&OpaqueVisitor).unwrap();
 
         let mut map = glsl.add_function("vec4", "map", &[("vec3", "p")]);
-        let expr = shape.to_expr(&Context::new(), &mut map);
+        let expr = shape.make_expr(&Context::new(), &mut map);
         map.ret(expr);
 
         glsl.to_string()
@@ -126,11 +126,11 @@ impl StatementVisitor for GeometryVisitor {
     type Output = Box<dyn IGeometry>;
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
-        box Geometry { name, args }
+        box NamedGeometry { name, args }
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold { func, items }
+        box Fold { func, items, marker: GeometryMarker }
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
@@ -147,7 +147,7 @@ impl StatementVisitor for OpaqueVisitor {
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold { func, items }
+        box Fold { func, items, marker: OpaqueMarker }
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {

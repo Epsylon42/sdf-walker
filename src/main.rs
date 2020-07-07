@@ -37,7 +37,9 @@ fn main() {
 
     #[cfg(feature = "generated")]
     let provider = GeneratedScene {
-        source: "test.scene".into(),
+        source: std::env::args().nth(1)
+            .unwrap_or_else(|| String::from("test.scene"))
+            .into(),
     };
 
     let mut app = App::new((800, 600), provider);
