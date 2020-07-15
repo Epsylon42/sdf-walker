@@ -2,7 +2,7 @@ define_geometry(room, vec3 size, vec2 door, float thick)
 at(0,size.y,0)
 difference {
     onionize(thick) sd_box(size);
-    at(0, door.y + thick, -door.z, thick) sd_box(vec3(door, thick*2));
+    at(0, -door.y/2, -size.z + thick) sd_box(vec3(door, thick*2));
 };
 
 

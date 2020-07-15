@@ -17,8 +17,10 @@ impl Glsl {
         name: impl ToString,
         args: &[(impl ToString, impl ToString)],
     ) -> Function {
+        self.uniq += 1;
         Function {
-            glsl: self,
+            uniq_above: self.uniq,
+            uniq: 0,
             ret: typ.to_string(),
             name: name.to_string(),
             args: args
@@ -36,18 +38,19 @@ impl ToString for Glsl {
     }
 }
 
-pub struct Function<'a> {
-    pub glsl: &'a mut Glsl,
+pub struct Function {
+    uniq_above: usize,
+    uniq: usize,
     ret: String,
     name: String,
     args: Vec<(String, String)>,
     definitions: Vec<String>,
 }
 
-impl<'a> Function<'a> {
+impl Function {
     pub fn gen_definition(&mut self, typ: impl ToString, expr: impl ToString) -> String {
-        let ident = format!("def_{}", self.glsl.uniq);
-        self.glsl.uniq += 1;
+        self.uniq += 1;
+        let ident = format!("def_{}_{}", self.uniq_above, self.uniq);
 
         let def = format!("{} {} = {};", typ.to_string(), ident, expr.to_string());
         self.definitions.push(def);
@@ -55,7 +58,7 @@ impl<'a> Function<'a> {
         ident
     }
 
-    pub fn ret(self, expr: impl ToString) {
+    pub fn ret(self, glsl: &mut Glsl, expr: impl ToString) {
         let args = self
             .args
             .into_iter()
@@ -68,7 +71,7 @@ impl<'a> Function<'a> {
 
         let ret = format!("return {};", expr.to_string());
 
-        self.glsl
+        glsl
             .functions
             .push(format!("{}\n{}\n{}\n}}", fst, definitions, ret));
     }

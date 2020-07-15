@@ -10,20 +10,61 @@ impl ToString for SceneDesc {
     fn to_string(&self) -> String {
         let mut glsl = Glsl::new();
 
-        let fold = Statement {
+        let mut fold = Statement {
             name: String::from("union"),
             args: Vec::new(),
-            body: self.statements.clone(),
+            body: Vec::new(),
         };
+
+        for stmt in self.statements.clone() {
+            if stmt.name == "define_geometry" {
+                define_geometry(&mut glsl, stmt.args, stmt.body).unwrap();
+            } else {
+                fold.body.push(stmt);
+            }
+        }
 
         let shape = fold.visit(&OpaqueVisitor).unwrap();
 
         let mut map = glsl.add_function("vec4", "map", &[("vec3", "p")]);
         let expr = shape.make_expr(&Context::new(), &mut map);
-        map.ret(expr);
+        map.ret(&mut glsl, expr);
 
         glsl.to_string()
     }
+}
+
+fn define_geometry(glsl: &mut Glsl, args: Vec<String>, body: Vec<Statement>) -> Result<(), StatementError> {
+    if args.is_empty() {
+        return Err(StatementError("define_geometry requires at least one argument".into()));
+    }
+
+    let fold = Statement {
+        name: String::from("union"),
+        args: Vec::new(),
+        body,
+    };
+
+    let geometry = fold.visit(&GeometryVisitor)?;
+
+    let name = &args[0];
+    let args = args
+        .iter()
+        .skip(1)
+        .map(|arg| {
+            let parts = arg.split_whitespace()
+                .collect::<Vec<_>>();
+
+            (parts[0], parts[1])
+        })
+        .chain(std::iter::once(("vec3", "p")))
+        .collect::<Vec<_>>();
+
+    let mut func = glsl.add_function("float", name, &args);
+    let expr = geometry.make_expr(&Context::new(), &mut func);
+    func.ret(glsl, expr);
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,6 +130,16 @@ impl Statement {
                 )
             }
 
+            "onionize" => {
+                assert!(self.args.len() == 1);
+                vis.construct_transform(
+                    Onionize { 
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
             _ => {
                 assert!(self.body.is_empty());
                 vis.construct_named(self.name.clone(), self.args.clone())
@@ -134,7 +185,7 @@ impl StatementVisitor for GeometryVisitor {
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform { tf, item }
+        box Transform { tf, item, marker: GeometryMarker }
     }
 }
 
@@ -151,7 +202,7 @@ impl StatementVisitor for OpaqueVisitor {
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform { tf, item }
+        box Transform { tf, item, marker: OpaqueMarker }
     }
 
     fn construct_opaque(

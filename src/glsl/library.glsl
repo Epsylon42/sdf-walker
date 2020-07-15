@@ -2,6 +2,9 @@
 float vmax(vec3 a) {
     return max(a.x, max(a.y, a.z));
 }
+float vmin(vec3 a) {
+    return min(a.x, min(a.y, a.z));
+}
 
 
 // space transforms
@@ -41,7 +44,7 @@ float sd_diff(float a, float b) {
 }
 
 float sd_onionize(float thick, float a) {
-    return sd_diff(a, -(a + thick));
+    return sd_diff(a, a + thick);
 }
 
 vec4 csd_union(vec4 a, vec4 b) {
@@ -77,4 +80,21 @@ float sd_column_aa(vec3 axis, float rad, vec3 p) {
     return sd_isect(
             sd_halfspace_aa(axis, vat(axis * rad, p)), 
             sd_halfspace_aa(-axis, vat(-axis * rad, p)));
+}
+
+struct Shadow {
+    vec3 mask;
+    float shadow;
+};
+
+struct MapTransparent {
+    vec4 color;
+    float d;
+};
+
+vec3 apply_mask(vec3 color, vec3 mask) {
+    if (length(1 - mask) > 1) {
+        mask = normalize(mask);
+    }
+    return color * mask;
 }

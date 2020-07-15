@@ -29,7 +29,7 @@ impl MakeExpr for Box<dyn IOpaqueShape> {
 }
 
 pub trait ITransform: Debug + 'static {
-    fn create(&self, ctx: &Context, func: &mut glsl::Function) -> Context;
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr) -> glsl::Expr;
 }
 
 

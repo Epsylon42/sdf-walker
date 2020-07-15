@@ -38,6 +38,15 @@ pub enum TypeMarker {
     Opaque(OpaqueMarker)
 }
 
+impl TypeMarker {
+    fn typ(&self) -> &'static str {
+        match self {
+            TypeMarker::Geometry(_) => "float",
+            TypeMarker::Opaque(_) => "vec4",
+        }
+    }
+}
+
 impl From<GeometryMarker> for TypeMarker {
     fn from(m: GeometryMarker) -> Self {
         TypeMarker::Geometry(m)
