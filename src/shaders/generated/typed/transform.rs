@@ -36,6 +36,24 @@ impl ITransform for At {
 }
 
 #[derive(Debug)]
+pub struct Repeat {
+    pub args: Vec<String>,
+}
+
+impl ITransform for Repeat {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr) -> glsl::Expr {
+        let mut at = glsl::FunctionCall::new("repeat");
+        for arg in &self.args {
+            at.push_arg(arg.as_str().into());
+        }
+        at.push_arg(ctx.p.as_str().into());
+
+        let ident = func.gen_definition("vec3", glsl::Expr::from(at));
+        inside.make_expr(&Context::with_p(ident), func)
+    }
+}
+
+#[derive(Debug)]
 pub struct Onionize {
     pub args: Vec<String>
 }

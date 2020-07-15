@@ -130,6 +130,16 @@ impl Statement {
                 )
             }
 
+            "repeat" => {
+                assert!(self.args.len() == 1 || self.args.len() == 3);
+                vis.construct_transform(
+                    Repeat {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
             "onionize" => {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
