@@ -26,11 +26,11 @@ impl ITransform for At {
     fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr) -> glsl::Expr {
         let mut at = glsl::FunctionCall::new("at");
         for arg in &self.args {
-            at.push_arg(arg.as_str().into());
+            at.push_arg(arg);
         }
-        at.push_arg(ctx.arg.as_str().into());
+        at.push_arg(&ctx.arg);
 
-        let ident = func.gen_definition("Arg", glsl::Expr::from(at));
+        let ident = func.gen_definition("Arg", at);
         inside.make_expr(&Context::with_arg(ident), func)
     }
 }
@@ -44,11 +44,11 @@ impl ITransform for Repeat {
     fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr) -> glsl::Expr {
         let mut at = glsl::FunctionCall::new("repeat");
         for arg in &self.args {
-            at.push_arg(arg.as_str().into());
+            at.push_arg(arg);
         }
-        at.push_arg(ctx.arg.as_str().into());
+        at.push_arg(&ctx.arg);
 
-        let ident = func.gen_definition("Arg", glsl::Expr::from(at));
+        let ident = func.gen_definition("Arg", at);
         inside.make_expr(&Context::with_arg(ident), func)
     }
 }
@@ -65,8 +65,8 @@ impl ITransform for Onionize {
 
         let mut onionize = glsl::FunctionCall::new("sd_onionize");
         assert_eq!(self.args.len(), 1);
-        onionize.push_arg(glsl::Expr::from(self.args[0].clone()));
-        onionize.push_arg(glsl::Expr::from(expr_ident));
+        onionize.push_arg(self.args[0].clone());
+        onionize.push_arg(expr_ident);
 
         onionize.into()
     }

@@ -77,6 +77,7 @@ impl Function {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Expr {
     FunctionCall(FunctionCall),
     String(String),
@@ -88,15 +89,9 @@ impl From<FunctionCall> for Expr {
     }
 }
 
-impl From<String> for Expr {
-    fn from(x: String) -> Self {
-        Expr::String(x)
-    }
-}
-
-impl<'a> From<&'a str> for Expr {
-    fn from(x: &'a str) -> Self {
-        Expr::String(x.to_string())
+impl<T: Into<String>> From<T> for Expr {
+    fn from(t: T) -> Self {
+        Expr::String(t.into())
     }
 }
 
@@ -118,6 +113,7 @@ impl ToString for Expr {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct FunctionCall {
     name: String,
     args: Vec<Expr>,
@@ -131,7 +127,13 @@ impl FunctionCall {
         }
     }
 
-    pub fn push_arg(&mut self, arg: Expr) {
-        self.args.push(arg);
+    pub fn push_arg(&mut self, arg: impl Into<Expr>) {
+        self.args.push(arg.into());
+    }
+}
+
+impl ToString for FunctionCall {
+    fn to_string(&self) -> String {
+        Expr::from(self.clone()).to_string()
     }
 }
