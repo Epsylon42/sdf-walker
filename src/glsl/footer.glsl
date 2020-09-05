@@ -1,3 +1,7 @@
+vec4 map(vec3 p) {
+    return map_impl(Arg(p, time));
+}
+
 MapTransparent map_transparent(vec3 p) {
     return MapTransparent(vec4(0), 1.0/0.0);
 }

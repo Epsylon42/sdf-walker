@@ -24,7 +24,9 @@ impl ShaderProvider for GeneratedScene {
 
         let fragment = format!("{}{}{}{}", header, library, dbg!(desc).to_string(), footer);
 
-        println!("{}", fragment);
+        for (i, line) in fragment.split('\n').enumerate() {
+            println!("{}: {}", i+1, line);
+        }
 
         [vertex, fragment]
     }

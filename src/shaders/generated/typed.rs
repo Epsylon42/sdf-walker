@@ -16,18 +16,18 @@ pub use fold::*;
 
 
 pub struct Context {
-    p: String,
+    arg: String,
 }
 
 impl Context {
     pub fn new() -> Self {
         Context {
-            p: String::from("p"),
+            arg: String::from("arg"),
         }
     }
 
-    fn with_p(p: String) -> Self {
-        Context { p }
+    fn with_arg(arg: String) -> Self {
+        Context { arg }
     }
 }
 

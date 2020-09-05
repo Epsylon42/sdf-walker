@@ -42,7 +42,7 @@ impl MakeExpr for NamedOpaqueShape {
             func.push_arg(glsl::Expr::from(arg.as_str()));
         }
 
-        func.push_arg(ctx.p.as_str().into());
+        func.push_arg(ctx.arg.as_str().into());
 
         func.into()
     }

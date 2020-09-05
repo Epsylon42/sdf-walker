@@ -28,10 +28,10 @@ impl ITransform for At {
         for arg in &self.args {
             at.push_arg(arg.as_str().into());
         }
-        at.push_arg(ctx.p.as_str().into());
+        at.push_arg(ctx.arg.as_str().into());
 
-        let ident = func.gen_definition("vec3", glsl::Expr::from(at));
-        inside.make_expr(&Context::with_p(ident), func)
+        let ident = func.gen_definition("Arg", glsl::Expr::from(at));
+        inside.make_expr(&Context::with_arg(ident), func)
     }
 }
 
@@ -46,10 +46,10 @@ impl ITransform for Repeat {
         for arg in &self.args {
             at.push_arg(arg.as_str().into());
         }
-        at.push_arg(ctx.p.as_str().into());
+        at.push_arg(ctx.arg.as_str().into());
 
-        let ident = func.gen_definition("vec3", glsl::Expr::from(at));
-        inside.make_expr(&Context::with_p(ident), func)
+        let ident = func.gen_definition("Arg", glsl::Expr::from(at));
+        inside.make_expr(&Context::with_arg(ident), func)
     }
 }
 

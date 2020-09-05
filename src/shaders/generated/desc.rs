@@ -24,9 +24,9 @@ impl ToString for SceneDesc {
             }
         }
 
-        let shape = fold.visit(&OpaqueVisitor).unwrap();
+        let shape = fold.apply(&OpaqueVisitor).unwrap();
 
-        let mut map = glsl.add_function("vec4", "map", &[("vec3", "p")]);
+        let mut map = glsl.add_function("vec4", "map_impl", &[("Arg", "arg")]);
         let expr = shape.make_expr(&Context::new(), &mut map);
         map.ret(&mut glsl, expr);
 
@@ -45,7 +45,7 @@ fn define_geometry(glsl: &mut Glsl, args: Vec<String>, body: Vec<Statement>) -> 
         body,
     };
 
-    let geometry = fold.visit(&GeometryVisitor)?;
+    let geometry = fold.apply(&GeometryVisitor)?;
 
     let name = &args[0];
     let args = args
@@ -57,7 +57,7 @@ fn define_geometry(glsl: &mut Glsl, args: Vec<String>, body: Vec<Statement>) -> 
 
             (parts[0], parts[1])
         })
-        .chain(std::iter::once(("vec3", "p")))
+        .chain(std::iter::once(("Arg", "arg")))
         .collect::<Vec<_>>();
 
     let mut func = glsl.add_function("float", name, &args);
@@ -91,7 +91,7 @@ impl ToString for Statement {
 pub struct StatementError(String);
 
 impl Statement {
-    pub fn visit<V: StatementVisitor + ?Sized>(
+    pub fn apply<V: StatementVisitor + ?Sized>(
         &self,
         vis: &V,
     ) -> Result<V::Output, StatementError> {
@@ -178,7 +178,7 @@ pub trait StatementVisitor {
     }
 
     fn visit_body(&self, stmt: &Statement) -> Result<Vec<Self::Output>, StatementError> {
-        stmt.body.iter().map(|stmt| stmt.visit(self)).collect()
+        stmt.body.iter().map(|stmt| stmt.apply(self)).collect()
     }
 }
 

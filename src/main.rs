@@ -60,11 +60,18 @@ pub struct Vertex {
 
 #[derive(UniformInterface)]
 pub struct Uniforms {
+    #[uniform(unbound)]
     aspect: Uniform<f32>,
+    #[uniform(unbound)]
     fov: Uniform<f32>,
+    #[uniform(unbound)]
     cam: Uniform<M44>,
+    #[uniform(unbound)]
     cam_pos: Uniform<[f32; 3]>,
+    #[uniform(unbound)]
     light: Uniform<[f32; 3]>,
+    #[uniform(unbound)]
+    time: Uniform<f32>,
 }
 
 const SCREEN: [Vertex; 6] = [
@@ -208,7 +215,7 @@ impl App {
         glm::quat_rotate(&rot, self.rot.x, &self.camera_up)
     }
 
-    fn draw(&mut self, _: f32) {
+    fn draw(&mut self, time: f32) {
         let camera = self.camera_rotation();
 
         let Self {
@@ -234,6 +241,7 @@ impl App {
                     iface.cam.update(glm::quat_to_mat4(&camera).into());
                     iface.cam_pos.update([pos.x, pos.y, pos.z]);
                     iface.light.update([1.0, -1.0, 1.0]);
+                    iface.time.update(time);
 
                     render_gate.render(&RenderState::default(), |mut tess_gate| {
                         tess_gate.render(triangle.slice(..));

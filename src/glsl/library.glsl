@@ -1,3 +1,8 @@
+struct Arg {
+    vec3 p;
+    float t;
+};
+
 // utils
 float vmax(vec3 a) {
     return max(a.x, max(a.y, a.z));
@@ -8,25 +13,28 @@ float vmin(vec3 a) {
 
 
 // space transforms
-vec3 vat(vec3 shift, vec3 p) {
-    return p - shift;
+Arg vat(vec3 shift, Arg arg) {
+    arg.p -= shift;
+    return arg;
 }
-vec3 at(float x, float y, float z, vec3 p) {
-    return vat(vec3(x,y,z), p);
-}
-
-vec3 vscale(vec3 sc, vec3 p) {
-    return p / sc;
-}
-vec3 scale(float x, float y, float z, vec3 p) {
-    return vscale(vec3(x,y,z), p);
+Arg at(float x, float y, float z, Arg arg) {
+    return vat(vec3(x,y,z), arg);
 }
 
-vec3 vrepeat(vec3 size, vec3 p) {
-    return mod(p + size/2, size) - size/2;
+Arg vscale(vec3 sc, Arg arg) {
+    arg.p /= sc;
+    return arg;
 }
-vec3 repeat(float x, float y, float z, vec3 p) {
-    return vrepeat(vec3(x,y,z), p);
+Arg scale(float x, float y, float z, Arg arg) {
+    return vscale(vec3(x,y,z), arg);
+}
+
+Arg vrepeat(vec3 size, Arg arg) {
+    arg.p = mod(arg.p + size/2, size) - size/2;
+    return arg;
+}
+Arg repeat(float x, float y, float z, Arg arg) {
+    return vrepeat(vec3(x,y,z), arg);
 }
 
 
@@ -57,29 +65,29 @@ vec4 csd_isect(vec4 a, vec4 b) {
 
 
 // shapes
-float sd_sphere(float r, vec3 p) {
-    return length(p) - r;
+float sd_sphere(float r, Arg arg) {
+    return length(arg.p) - r;
 }
 
-float sd_box(vec3 s, vec3 p)
+float sd_box(vec3 s, Arg arg)
 {
-    return vmax(abs(p) - s);
+    return vmax(abs(arg.p) - s);
 }
 
-float sd_halfspace(vec3 norm, vec3 p) {
-    return dot(p, norm);
+float sd_halfspace(vec3 norm, Arg arg) {
+    return dot(arg.p, norm);
 }
 
-float sd_halfspace_aa(vec3 axis, vec3 p) {
-    return vmax(p * axis);
+float sd_halfspace_aa(vec3 axis, Arg arg) {
+    return vmax(arg.p * axis);
 }
 
-float sd_column_aa(vec3 axis, float rad, vec3 p) {
+float sd_column_aa(vec3 axis, float rad, Arg arg) {
     axis = -(axis - vec3(1));
 
     return sd_isect(
-            sd_halfspace_aa(axis, vat(axis * rad, p)), 
-            sd_halfspace_aa(-axis, vat(-axis * rad, p)));
+            sd_halfspace_aa(axis, vat(axis * rad, arg)), 
+            sd_halfspace_aa(-axis, vat(-axis * rad, arg)));
 }
 
 struct Shadow {
