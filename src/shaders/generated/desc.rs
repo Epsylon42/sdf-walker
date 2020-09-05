@@ -150,6 +150,16 @@ impl Statement {
                 )
             }
 
+            "scale" => {
+                assert!(self.args.len() == 1);
+                vis.construct_transform(
+                    Scale {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
             _ => {
                 assert!(self.body.is_empty());
                 vis.construct_named(self.name.clone(), self.args.clone())

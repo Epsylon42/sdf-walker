@@ -29,7 +29,7 @@ impl MakeExpr for Box<dyn IOpaqueShape> {
 }
 
 pub trait ITransform: Debug + 'static {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr) -> glsl::Expr;
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, typ: TypeMarker) -> glsl::Expr;
 }
 
 
@@ -37,3 +37,5 @@ pub trait IFunc: Debug + 'static {
     fn name(&self, typ: TypeMarker) -> &'static str;
     fn id(&self, typ: TypeMarker) -> &'static str;
 }
+
+pub trait ITypeMarker: Into<TypeMarker> + Debug + 'static + Copy {}

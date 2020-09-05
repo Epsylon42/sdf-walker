@@ -38,6 +38,8 @@ pub enum TypeMarker {
     Opaque(OpaqueMarker)
 }
 
+impl ITypeMarker for TypeMarker {}
+
 impl TypeMarker {
     fn typ(&self) -> &'static str {
         match self {

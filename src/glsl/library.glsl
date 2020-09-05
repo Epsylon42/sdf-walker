@@ -28,6 +28,10 @@ Arg vscale(vec3 sc, Arg arg) {
 Arg scale(float x, float y, float z, Arg arg) {
     return vscale(vec3(x,y,z), arg);
 }
+Arg uscale(float sc, Arg arg) {
+    arg.p /= sc;
+    return arg;
+}
 
 Arg vrepeat(vec3 size, Arg arg) {
     arg.p = mod(arg.p + size/2, size) - size/2;

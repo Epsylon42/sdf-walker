@@ -12,11 +12,11 @@ pub struct Fold<F, T, M> {
 impl<F: IFunc, T: IGeometry> IGeometry for Fold<F, T, GeometryMarker> {}
 impl<F: IFunc, T: IOpaqueShape> IOpaqueShape for Fold<F, T, OpaqueMarker> {}
 
-impl<F: IFunc, T: MakeExpr, M: Into<TypeMarker> + Copy + Debug + 'static> MakeExpr for Fold<F, T, M> 
+impl<F: IFunc, T: MakeExpr, M: ITypeMarker> MakeExpr for Fold<F, T, M> 
 {
     fn make_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr {
         match self.items.len() {
-            0 => self.func.id(self.marker.clone().into()).into(),
+            0 => self.func.id(self.marker.into()).into(),
             1 => self.items[0].make_expr(ctx, func),
             _ => {
                 let func_name = self.func.name(self.marker.into());

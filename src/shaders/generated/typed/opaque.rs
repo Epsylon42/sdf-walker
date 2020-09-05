@@ -4,6 +4,8 @@ use super::*;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct OpaqueMarker;
 
+impl ITypeMarker for OpaqueMarker {}
+
 
 #[derive(Debug)]
 pub struct OpaqueShape<G: IGeometry> {
