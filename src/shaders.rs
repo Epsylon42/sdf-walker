@@ -1,7 +1,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use luminance::shader::program::{Program, UniformInterface};
+use luminance::context::GraphicsContext;
+use luminance::backend::shader::Shader;
+use luminance::shader::{Program, ProgramBuilder, UniformInterface};
+
+use crate::Backend;
 
 #[cfg(feature = "generated")]
 mod generated;
@@ -12,18 +16,22 @@ pub use generated::GeneratedScene;
 pub trait ShaderProvider {
     fn get_sources(&self) -> [String; 2];
 
-    fn get<S, Out, Uni>(&self) -> Program<S, Out, Uni>
+    fn get<C, S, Out, Uni>(&self, ctx: &mut C) -> Program<C::Backend, S, Out, Uni>
     where
+        C: GraphicsContext,
+        C::Backend: Shader,
         S: luminance::vertex::Semantics,
-        Uni: UniformInterface,
+        Uni: UniformInterface<C::Backend>,
     {
         let [vertex, fragment] = self.get_sources();
 
-        Program::from_strings(None, &vertex, None, &fragment)
-            .map_err(|e| {
-                println!("{}", e);
-            })
-            .unwrap()
+        ctx.new_shader_program()
+            .from_strings(
+                &vertex,
+                None,
+                None,
+                &fragment
+            ).unwrap()
             .ignore_warnings()
     }
 }

@@ -10,11 +10,12 @@ file = []
 generated = ["nom"]
 
 [dependencies]
-luminance = "0.39.0"
-luminance-derive = "0.5.3"
-luminance-glfw = "0.12.1"
-luminance-windowing = "0.8.2"
+luminance-glutin = { path = "./luminance-glutin" }
 nalgebra-glm = "0.7.0"
+glutin = { version = "0.24.0", default-features = false }
+image = "0.23.10"
+luminance = "0.42.1"
+luminance-derive = "0.6.2"
 
 [dependencies.nom]
 version = "5.1.2"
