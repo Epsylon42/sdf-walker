@@ -1,11 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use luminance::context::GraphicsContext;
 use luminance::backend::shader::Shader;
-use luminance::shader::{Program, ProgramBuilder, UniformInterface};
-
-use crate::Backend;
+use luminance::context::GraphicsContext;
+use luminance::shader::{Program, UniformInterface};
 
 #[cfg(feature = "generated")]
 mod generated;
@@ -26,12 +24,8 @@ pub trait ShaderProvider {
         let [vertex, fragment] = self.get_sources();
 
         ctx.new_shader_program()
-            .from_strings(
-                &vertex,
-                None,
-                None,
-                &fragment
-            ).unwrap()
+            .from_strings(&vertex, None, None, &fragment)
+            .unwrap()
             .ignore_warnings()
     }
 }

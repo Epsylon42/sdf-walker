@@ -1,6 +1,5 @@
 use super::*;
 
-
 #[derive(Debug)]
 pub struct Transform<F, T, M> {
     pub tf: F,
@@ -23,7 +22,13 @@ pub struct At {
 }
 
 impl ITransform for At {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _: TypeMarker) -> glsl::Expr {
+    fn wrap(
+        &self,
+        ctx: &Context,
+        func: &mut glsl::Function,
+        inside: &impl MakeExpr,
+        _: TypeMarker,
+    ) -> glsl::Expr {
         let mut at = glsl::FunctionCall::new("at");
         for arg in &self.args {
             at.push_arg(arg);
@@ -41,7 +46,13 @@ pub struct Repeat {
 }
 
 impl ITransform for Repeat {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _: TypeMarker) -> glsl::Expr {
+    fn wrap(
+        &self,
+        ctx: &Context,
+        func: &mut glsl::Function,
+        inside: &impl MakeExpr,
+        _: TypeMarker,
+    ) -> glsl::Expr {
         let mut at = glsl::FunctionCall::new("repeat");
         for arg in &self.args {
             at.push_arg(arg);
@@ -55,11 +66,17 @@ impl ITransform for Repeat {
 
 #[derive(Debug)]
 pub struct Onionize {
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 impl ITransform for Onionize {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _: TypeMarker) -> glsl::Expr {
+    fn wrap(
+        &self,
+        ctx: &Context,
+        func: &mut glsl::Function,
+        inside: &impl MakeExpr,
+        _: TypeMarker,
+    ) -> glsl::Expr {
         let expr = inside.make_expr(ctx, func);
         let expr_ident = func.gen_definition("float", expr);
 
@@ -74,11 +91,17 @@ impl ITransform for Onionize {
 
 #[derive(Debug)]
 pub struct Scale {
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 impl ITransform for Scale {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, typ: TypeMarker) -> glsl::Expr {
+    fn wrap(
+        &self,
+        ctx: &Context,
+        func: &mut glsl::Function,
+        inside: &impl MakeExpr,
+        typ: TypeMarker,
+    ) -> glsl::Expr {
         let mut scale = glsl::FunctionCall::new("uscale");
         scale.push_arg(&self.args[0]);
         scale.push_arg(&ctx.arg);
@@ -90,7 +113,11 @@ impl ITransform for Scale {
             TypeMarker::Geometry(_) => format!("(({}) * ({}))", expr.to_string(), self.args[0]),
             TypeMarker::Opaque(_) => {
                 let expr = func.gen_definition("vec4", expr);
-                format!("vec4({expr}.xyz, {expr}.w * ({scale}))", expr=expr, scale=self.args[0])
+                format!(
+                    "vec4({expr}.xyz, {expr}.w * ({scale}))",
+                    expr = expr,
+                    scale = self.args[0]
+                )
             }
         }
         .into()
@@ -99,11 +126,17 @@ impl ITransform for Scale {
 
 #[derive(Debug)]
 pub struct AtT {
-    pub args: Vec<String>
+    pub args: Vec<String>,
 }
 
 impl ITransform for AtT {
-    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _: TypeMarker) -> glsl::Expr {
+    fn wrap(
+        &self,
+        ctx: &Context,
+        func: &mut glsl::Function,
+        inside: &impl MakeExpr,
+        _: TypeMarker,
+    ) -> glsl::Expr {
         let mut at = glsl::FunctionCall::new("at_t");
         for arg in &self.args {
             at.push_arg(arg);

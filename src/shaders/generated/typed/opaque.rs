@@ -1,11 +1,9 @@
 use super::*;
 
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct OpaqueMarker;
 
 impl ITypeMarker for OpaqueMarker {}
-
 
 #[derive(Debug)]
 pub struct OpaqueShape<G: IGeometry> {
@@ -27,7 +25,6 @@ impl<G: IGeometry> MakeExpr for OpaqueShape<G> {
         vec4.into()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct NamedOpaqueShape {

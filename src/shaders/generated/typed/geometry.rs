@@ -1,11 +1,9 @@
 use super::*;
 
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GeometryMarker;
 
 impl ITypeMarker for GeometryMarker {}
-
 
 #[derive(Debug)]
 pub struct NamedGeometry {

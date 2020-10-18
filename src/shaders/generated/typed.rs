@@ -2,18 +2,17 @@ use std::fmt::Debug;
 
 use super::codegen as glsl;
 
-pub mod traits;
+pub mod fold;
 pub mod geometry;
 pub mod opaque;
+pub mod traits;
 pub mod transform;
-pub mod fold;
 
-pub use traits::*;
+pub use fold::*;
 pub use geometry::*;
 pub use opaque::*;
+pub use traits::*;
 pub use transform::*;
-pub use fold::*;
-
 
 pub struct Context {
     arg: String,
@@ -31,11 +30,10 @@ impl Context {
     }
 }
 
-
 #[derive(Debug, Clone, Copy)]
 pub enum TypeMarker {
     Geometry(GeometryMarker),
-    Opaque(OpaqueMarker)
+    Opaque(OpaqueMarker),
 }
 
 impl ITypeMarker for TypeMarker {}
@@ -60,7 +58,6 @@ impl From<OpaqueMarker> for TypeMarker {
         TypeMarker::Opaque(m)
     }
 }
-
 
 #[derive(Debug, Clone, Copy)]
 pub struct Union;

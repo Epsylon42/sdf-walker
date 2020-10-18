@@ -12,7 +12,10 @@ use nom::{
 
 pub fn scene(i: &[u8]) -> IResult<&[u8], SceneDesc> {
     map(
-        all_consuming(separated_list_terminated(&ws(character::char(';')), statement)),
+        all_consuming(separated_list_terminated(
+            &ws(character::char(';')),
+            statement,
+        )),
         |statements| SceneDesc { statements },
     )(i)
 }
@@ -41,15 +44,13 @@ fn body(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
 
 fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        many1(
-            ws(
-                alt((
-                        simple_value,
-                        map(bytes::is_a("+-*/"), |b: &[u8]| String::from_utf8(b.to_owned()).unwrap()),
-                        map(args, |args| format!("({})", args.join(", "))),
-                ))
-            )
-        ),
+        many1(ws(alt((
+            simple_value,
+            map(bytes::is_a("+-*/"), |b: &[u8]| {
+                String::from_utf8(b.to_owned()).unwrap()
+            }),
+            map(args, |args| format!("({})", args.join(", "))),
+        )))),
         |parts| parts.join(""),
     )(i)
 }

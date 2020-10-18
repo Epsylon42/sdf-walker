@@ -34,9 +34,15 @@ impl ToString for SceneDesc {
     }
 }
 
-fn define_geometry(glsl: &mut Glsl, args: Vec<String>, body: Vec<Statement>) -> Result<(), StatementError> {
+fn define_geometry(
+    glsl: &mut Glsl,
+    args: Vec<String>,
+    body: Vec<Statement>,
+) -> Result<(), StatementError> {
     if args.is_empty() {
-        return Err(StatementError("define_geometry requires at least one argument".into()));
+        return Err(StatementError(
+            "define_geometry requires at least one argument".into(),
+        ));
     }
 
     let fold = Statement {
@@ -52,8 +58,7 @@ fn define_geometry(glsl: &mut Glsl, args: Vec<String>, body: Vec<Statement>) -> 
         .iter()
         .skip(1)
         .map(|arg| {
-            let parts = arg.split_whitespace()
-                .collect::<Vec<_>>();
+            let parts = arg.split_whitespace().collect::<Vec<_>>();
 
             (parts[0], parts[1])
         })
@@ -153,7 +158,7 @@ impl Statement {
             "onionize" => {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
-                    Onionize { 
+                    Onionize {
                         args: self.args.clone(),
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),
@@ -211,11 +216,19 @@ impl StatementVisitor for GeometryVisitor {
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold { func, items, marker: GeometryMarker }
+        box Fold {
+            func,
+            items,
+            marker: GeometryMarker,
+        }
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform { tf, item, marker: GeometryMarker }
+        box Transform {
+            tf,
+            item,
+            marker: GeometryMarker,
+        }
     }
 }
 
@@ -228,11 +241,19 @@ impl StatementVisitor for OpaqueVisitor {
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold { func, items, marker: OpaqueMarker }
+        box Fold {
+            func,
+            items,
+            marker: OpaqueMarker,
+        }
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform { tf, item, marker: OpaqueMarker }
+        box Transform {
+            tf,
+            item,
+            marker: OpaqueMarker,
+        }
     }
 
     fn construct_opaque(

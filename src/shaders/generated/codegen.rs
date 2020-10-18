@@ -71,8 +71,7 @@ impl Function {
 
         let ret = format!("return {};", expr.to_string());
 
-        glsl
-            .functions
+        glsl.functions
             .push(format!("{}\n{}\n{}\n}}", fst, definitions, ret));
     }
 }
