@@ -96,3 +96,21 @@ impl ITransform for Scale {
         .into()
     }
 }
+
+#[derive(Debug)]
+pub struct AtT {
+    pub args: Vec<String>
+}
+
+impl ITransform for AtT {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _: TypeMarker) -> glsl::Expr {
+        let mut at = glsl::FunctionCall::new("at_t");
+        for arg in &self.args {
+            at.push_arg(arg);
+        }
+        at.push_arg(&ctx.arg);
+
+        let ident = func.gen_definition("Arg", at);
+        inside.make_expr(&Context::with_arg(ident), func)
+    }
+}

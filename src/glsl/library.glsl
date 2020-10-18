@@ -41,6 +41,13 @@ Arg repeat(float x, float y, float z, Arg arg) {
     return vrepeat(vec3(x,y,z), arg);
 }
 
+// time transforms
+
+Arg at_t(float t, Arg arg) {
+    arg.t -= t;
+    return arg;
+}
+
 
 // shape transforms
 float sd_union(float a, float b) {

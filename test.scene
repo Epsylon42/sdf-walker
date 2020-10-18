@@ -1,3 +1,8 @@
+define_geometry(moving_sphere)
+    at(0, sin(arg.t), 0)
+    scale(1 + abs(sin(arg.t)))
+    sd_sphere(1);
+
 define_geometry(room, vec3 size, vec2 door, float thick)
 at(0,size.y,0)
 union {
@@ -7,9 +12,12 @@ union {
         at(0,0,-5) sd_box(vec3(10,3,3));
         at(0,0,5) sd_box(vec3(10,3,3));
     };
-    at(0, sin(arg.t) * size.y, 0)
-    scale(1 + abs(sin(arg.t)))
-    sd_sphere(1);
+};
+
+at(0,0,5)
+opaque(1,1,1) union {
+    moving_sphere();
+    at(3,0,0) at_t(1) moving_sphere();
 };
 
 opaque(0.9, 0.8, 1.0)

@@ -130,6 +130,16 @@ impl Statement {
                 )
             }
 
+            "at_t" => {
+                assert!(self.args.len() == 1);
+                vis.construct_transform(
+                    AtT {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
             "repeat" => {
                 assert!(self.args.len() == 1 || self.args.len() == 3);
                 vis.construct_transform(
