@@ -14,6 +14,33 @@ union {
     };
 };
 
+camera {
+    keyframe(0) {
+        pos(0, 0, 0);
+        look_at(10, -3, 10);
+    };
+
+    keyframe(5) {
+        pos(10, 0, -5);
+    };
+
+    keyframe(6);
+
+    keyframe(11) {
+        pos(10, 0, 5);
+        euler(0, 180, 0, degrees);
+    };
+
+    keyframe(12);
+
+    keyframe(17) {
+        pos(10, 2, 5);
+        euler(0, 90, 0, degrees);
+    };
+
+    keyframe(20);
+};
+
 at(0,0,5)
 opaque(1,1,1) union {
     moving_sphere();

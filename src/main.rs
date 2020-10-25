@@ -29,38 +29,36 @@ mod shaders;
 use shaders::*;
 
 fn main() {
-    #[cfg(feature = "file")]
-    let provider = FileLoader {
-        vertex: "vertex.glsl".into(),
-        fragment: "fragment.glsl".into(),
-    };
-
-    #[cfg(feature = "embedded")]
-    let provider = EmbeddedLoader;
-
-    #[cfg(feature = "generated")]
-    let provider = GeneratedScene {
-        source: std::env::args()
+    let source = std::fs::read(
+        std::env::args()
             .nth(1)
-            .unwrap_or_else(|| String::from("test.scene"))
-            .into(),
-    };
+            .unwrap_or_else(|| String::from("test.scene")),
+    )
+    .unwrap();
+
+    let scene = SceneDesc::parse(&source);
 
     match std::env::args().nth(2) {
         Some(x) if x == "interactive" => {
-            let (app, el) = new_app([800, 600], provider);
+            let (app, el) = new_app([800, 600], scene);
             app.run(el);
         }
 
         _ => {
-            let (mut app, _) = new_app_offscreen([800, 600], provider);
+            let duration = scene
+                .camera
+                .as_ref()
+                .map(|cam| cam.duration().ceil())
+                .unwrap_or(10.0) as usize;
+
+            let (mut app, _) = new_app_offscreen([800, 600], scene);
 
             let fps = 24;
 
             let stdout = std::io::stdout();
             let mut stdout = stdout.lock();
 
-            for i in 0..(fps * 10) {
+            for i in 0..(fps * duration) {
                 use std::io::Write;
 
                 app.draw(i as f32 / fps as f32);
@@ -141,6 +139,8 @@ where
     Ctx::Backend: backend::shader::Shader,
     Col: ColorSlot<Ctx::Backend, Dim2>,
 {
+    scene: SceneDesc,
+
     surface: Ctx,
     bb: Framebuffer<Ctx::Backend, Dim2, Col, ()>,
 
@@ -182,6 +182,7 @@ where
         let camera = self.camera_rotation();
 
         let Self {
+            scene,
             surface,
             program,
             bb,
@@ -200,10 +201,16 @@ where
                     shader_gate.shade(program, |mut iface, uni, mut render_gate| {
                         let fov = glm::pi::<f32>() / 2.0;
 
+                        let (cam_pos, cam_rot) = if let Some(camera) = scene.camera.as_ref() {
+                            camera.get_transform_at(time)
+                        } else {
+                            (*pos, camera)
+                        };
+
                         iface.set(&uni.aspect, size[0] as f32 / size[1] as f32);
                         iface.set(&uni.fov, fov);
-                        iface.set(&uni.cam, glm::quat_to_mat4(&camera).into());
-                        iface.set(&uni.cam_pos, [pos.x, pos.y, pos.z]);
+                        iface.set(&uni.cam, glm::quat_to_mat4(&cam_rot).into());
+                        iface.set(&uni.cam_pos, [cam_pos.x, cam_pos.y, cam_pos.z]);
                         iface.set(&uni.light, [1.0, -1.0, 1.0]);
                         iface.set(&uni.time, time);
 
@@ -337,13 +344,13 @@ where
     fn to_image(&mut self) -> image::RgbImage {
         let color = self.bb.color_slot().get_raw_texels().unwrap();
         let image = image::RgbaImage::from_raw(self.size[0], self.size[1], color).unwrap();
-        image::DynamicImage::ImageRgba8(image).to_rgb()
+        image::DynamicImage::ImageRgba8(image).flipv().to_rgb()
     }
 }
 
 fn new_app_offscreen(
     size: [u32; 2],
-    shaders: impl ShaderProvider,
+    scene: SceneDesc,
 ) -> (App<GlutinOffscreen, pixel::NormRGBA8UI>, EventLoop<()>) {
     let el = EventLoop::new();
     let ctx_builder = glutin::ContextBuilder::new();
@@ -359,7 +366,8 @@ fn new_app_offscreen(
         .unwrap();
 
     let app = App {
-        program: shaders.get(&mut surface),
+        program: scene.get_program(&mut surface),
+        scene,
 
         surface,
         bb,
@@ -379,10 +387,7 @@ fn new_app_offscreen(
     (app, el)
 }
 
-fn new_app(
-    size: [u32; 2],
-    shaders: impl ShaderProvider,
-) -> (App<GlutinSurface, ()>, EventLoop<()>) {
+fn new_app(size: [u32; 2], scene: SceneDesc) -> (App<GlutinSurface, ()>, EventLoop<()>) {
     let (mut surface, el) = GlutinSurface::new_gl33_from_builders(
         |_, wb| wb.with_inner_size(glutin::dpi::Size::Physical(size.into())),
         |_, cb| cb,
@@ -401,7 +406,8 @@ fn new_app(
         .unwrap();
 
     let app = App {
-        program: shaders.get(&mut surface),
+        program: scene.get_program(&mut surface),
+        scene,
 
         surface,
         bb,

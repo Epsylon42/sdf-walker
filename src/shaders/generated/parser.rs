@@ -10,14 +10,11 @@ use nom::{
     IResult,
 };
 
-pub fn scene(i: &[u8]) -> IResult<&[u8], SceneDesc> {
-    map(
-        all_consuming(separated_list_terminated(
-            &ws(character::char(';')),
-            statement,
-        )),
-        |statements| SceneDesc { statements },
-    )(i)
+pub fn scene(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
+    all_consuming(separated_list_terminated(
+        &ws(character::char(';')),
+        statement,
+    ))(i)
 }
 
 fn statement(i: &[u8]) -> IResult<&[u8], Statement> {

@@ -1,13 +1,27 @@
+use crate::shaders::{GeneratedScene, ShaderProvider};
+
 use super::codegen::Glsl;
+use super::parser;
 use super::typed::*;
 
-#[derive(Debug, Clone, PartialEq)]
+pub mod camera;
+
+use camera::CameraDesc;
+
+#[derive(Debug, Clone)]
 pub struct SceneDesc {
-    pub statements: Vec<Statement>,
+    pub vertex: String,
+    pub fragment: String,
+    pub camera: Option<CameraDesc>,
 }
 
-impl ToString for SceneDesc {
-    fn to_string(&self) -> String {
+impl SceneDesc {
+    pub fn parse(source: &[u8]) -> Self {
+        let statements = parser::scene(source).unwrap().1;
+        Self::from_statements(statements)
+    }
+
+    pub fn from_statements(statements: Vec<Statement>) -> Self {
         let mut glsl = Glsl::new();
 
         let mut fold = Statement {
@@ -16,11 +30,19 @@ impl ToString for SceneDesc {
             body: Vec::new(),
         };
 
-        for stmt in self.statements.clone() {
-            if stmt.name == "define_geometry" {
-                define_geometry(&mut glsl, stmt.args, stmt.body).unwrap();
-            } else {
-                fold.body.push(stmt);
+        let mut camera = None;
+
+        for stmt in statements {
+            match stmt.name.as_str() {
+                "define_geometry" => define_geometry(&mut glsl, stmt.args, stmt.body).unwrap(),
+                "camera" => {
+                    if camera.is_some() {
+                        panic!("Duplicate camera");
+                    } else {
+                        camera = Some(CameraDesc::new(stmt))
+                    }
+                }
+                _ => fold.body.push(stmt),
             }
         }
 
@@ -30,7 +52,17 @@ impl ToString for SceneDesc {
         let expr = shape.make_expr(&Context::new(), &mut map);
         map.ret(&mut glsl, expr);
 
-        glsl.to_string()
+        SceneDesc {
+            vertex: GeneratedScene::get_vertex(),
+            fragment: GeneratedScene::compile_fragment(&glsl.to_string()),
+            camera,
+        }
+    }
+}
+
+impl ShaderProvider for SceneDesc {
+    fn get_sources(&self) -> [String; 2] {
+        [self.vertex.clone(), self.fragment.clone()]
     }
 }
 
