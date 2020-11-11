@@ -62,7 +62,7 @@ fn main() {
                 use std::io::Write;
 
                 app.draw(i as f32 / fps as f32);
-                stdout.write(&app.to_image().into_raw()).unwrap();
+                stdout.write_all(&app.to_image().into_raw()).unwrap();
             }
         }
     }
@@ -117,18 +117,35 @@ const SCREEN: [Vertex; 6] = [
     },
 ];
 
-trait MaybeSwapBuffers {
+trait CtxDetails: GraphicsContext
+    where Self::Backend: backend::framebuffer::Framebuffer<Dim2>,
+{
+    type FbCol: backend::color_slot::ColorSlot<Self::Backend, Dim2>;
+
     fn swap_buffers(&mut self);
+    fn update_backbuffer(&mut self) -> Framebuffer<Self::Backend, Dim2, Self::FbCol, ()>
+        where Self::Backend: backend::framebuffer::Framebuffer<Dim2>;
 }
 
-impl MaybeSwapBuffers for GlutinSurface {
+impl CtxDetails for GlutinSurface {
+    type FbCol = ();
+
     fn swap_buffers(&mut self) {
         self.swap_buffers();
     }
+
+    fn update_backbuffer(&mut self) -> Framebuffer<Self::Backend, Dim2, Self::FbCol, ()> {
+        self.back_buffer().unwrap()
+    }
 }
 
-impl MaybeSwapBuffers for GlutinOffscreen {
+impl CtxDetails for GlutinOffscreen {
+    type FbCol = pixel::NormRGBA8UI;
+
     fn swap_buffers(&mut self) {}
+    fn update_backbuffer(&mut self) -> Framebuffer<Self::Backend, Dim2, Self::FbCol, ()> {
+        unimplemented!()
+    }
 }
 
 struct App<Ctx, Col>
@@ -160,7 +177,7 @@ where
 
 impl<Ctx, Col> App<Ctx, Col>
 where
-    Ctx: GraphicsContext + MaybeSwapBuffers,
+    Ctx: GraphicsContext + CtxDetails<FbCol=Col>,
     Ctx::Backend: backend::framebuffer::Framebuffer<Dim2>,
     Ctx::Backend: backend::tess::Tess<Vertex, (), (), tess::Interleaved>,
     Ctx::Backend: backend::shader::Shader,
@@ -281,7 +298,7 @@ where
                     );
                     self.prev_cursor = Some(cursor);
 
-                    self.rot += diff * delta * 5.0;
+                    self.rot += diff;
                 }
 
                 Event::WindowEvent { event, .. } => match event {
@@ -320,6 +337,11 @@ where
                             ElementState::Pressed => self.pressed_keys.insert(key),
                             ElementState::Released => self.pressed_keys.remove(&key),
                         };
+                    }
+
+                    WindowEvent::Resized(size) => {
+                        self.size = [size.width, size.height];
+                        self.bb = self.surface.update_backbuffer();
                     }
 
                     _ => {}
