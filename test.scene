@@ -42,10 +42,7 @@ camera {
 };
 
 at(0,0,5)
-opaque(1,1,1) union {
-    moving_sphere();
-    at(3,0,0) at_t(1) moving_sphere();
-};
+opaque(1,1,1) moving_sphere();
 
 opaque(0.9, 0.8, 1.0)
 at(10, -3, 10)

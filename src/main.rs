@@ -36,33 +36,40 @@ fn main() {
     )
     .unwrap();
 
-    let scene = SceneDesc::parse(&source);
+    let mut scene = SceneDesc::parse(&source);
 
-    match std::env::args().nth(2) {
-        Some(x) if x == "interactive" => {
-            let (app, el) = new_app([800, 600], scene);
-            app.run(el);
-        }
+    for arg in std::env::args().skip(2).chain(std::iter::once("".into())) {
+        match arg.as_str() {
+            "nocamera" => {
+                scene.camera = None;
+            }
 
-        _ => {
-            let duration = scene
-                .camera
-                .as_ref()
-                .map(|cam| cam.duration().ceil())
-                .unwrap_or(10.0) as usize;
+            "interactive" => {
+                let (app, el) = new_app([800, 600], scene);
+                app.run(el);
+            }
 
-            let (mut app, _) = new_app_offscreen([800, 600], scene);
+            _ => {
+                let duration = scene
+                    .camera
+                    .as_ref()
+                    .map(|cam| cam.duration().ceil())
+                    .unwrap_or(10.0) as usize;
 
-            let fps = 24;
+                let (mut app, _) = new_app_offscreen([800, 600], scene);
 
-            let stdout = std::io::stdout();
-            let mut stdout = stdout.lock();
+                let fps = 24;
 
-            for i in 0..(fps * duration) {
-                use std::io::Write;
+                let stdout = std::io::stdout();
+                let mut stdout = stdout.lock();
 
-                app.draw(i as f32 / fps as f32);
-                stdout.write_all(&app.to_image().into_raw()).unwrap();
+                for i in 0..(fps * duration) {
+                    use std::io::Write;
+
+                    app.draw(i as f32 / fps as f32);
+                    stdout.write_all(&app.to_image().into_raw()).unwrap();
+                }
+                return;
             }
         }
     }
@@ -118,13 +125,15 @@ const SCREEN: [Vertex; 6] = [
 ];
 
 trait CtxDetails: GraphicsContext
-    where Self::Backend: backend::framebuffer::Framebuffer<Dim2>,
+where
+    Self::Backend: backend::framebuffer::Framebuffer<Dim2>,
 {
     type FbCol: backend::color_slot::ColorSlot<Self::Backend, Dim2>;
 
     fn swap_buffers(&mut self);
     fn update_backbuffer(&mut self) -> Framebuffer<Self::Backend, Dim2, Self::FbCol, ()>
-        where Self::Backend: backend::framebuffer::Framebuffer<Dim2>;
+    where
+        Self::Backend: backend::framebuffer::Framebuffer<Dim2>;
 }
 
 impl CtxDetails for GlutinSurface {
@@ -177,7 +186,7 @@ where
 
 impl<Ctx, Col> App<Ctx, Col>
 where
-    Ctx: GraphicsContext + CtxDetails<FbCol=Col>,
+    Ctx: GraphicsContext + CtxDetails<FbCol = Col>,
     Ctx::Backend: backend::framebuffer::Framebuffer<Dim2>,
     Ctx::Backend: backend::tess::Tess<Vertex, (), (), tess::Interleaved>,
     Ctx::Backend: backend::shader::Shader,
