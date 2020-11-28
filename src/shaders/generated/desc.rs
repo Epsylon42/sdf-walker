@@ -175,8 +175,20 @@ impl Statement {
             "at" => {
                 assert!(self.args.len() == 1 || self.args.len() == 3);
                 vis.construct_transform(
-                    At {
+                    FunctionTf {
+                        func: String::from("at"),
                         args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
+            "rotate" => {
+                assert!(self.args.len() == 2);
+                vis.construct_transform(
+                    FunctionTf {
+                        func: String::from("rotate"),
+                        args: self.args.clone()
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),
                 )
@@ -185,7 +197,8 @@ impl Statement {
             "at_t" => {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
-                    AtT {
+                    FunctionTf {
+                        func: String::from("at_t"),
                         args: self.args.clone(),
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),
@@ -195,7 +208,8 @@ impl Statement {
             "repeat" => {
                 assert!(self.args.len() == 1 || self.args.len() == 3);
                 vis.construct_transform(
-                    Repeat {
+                    FunctionTf {
+                        func: String::from("repeat"),
                         args: self.args.clone(),
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),

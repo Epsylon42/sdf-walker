@@ -17,49 +17,20 @@ impl<F: ITransform, T: MakeExpr, M: ITypeMarker> MakeExpr for Transform<F, T, M>
 }
 
 #[derive(Debug)]
-pub struct At {
+pub struct FunctionTf {
+    pub func: String,
     pub args: Vec<String>,
 }
 
-impl ITransform for At {
-    fn wrap(
-        &self,
-        ctx: &Context,
-        func: &mut glsl::Function,
-        inside: &impl MakeExpr,
-        _: TypeMarker,
-    ) -> glsl::Expr {
-        let mut at = glsl::FunctionCall::new("at");
+impl ITransform for FunctionTf {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _typ: TypeMarker) -> glsl::Expr {
+        let mut tf = glsl::FunctionCall::new(&self.func);
         for arg in &self.args {
-            at.push_arg(arg);
+            tf.push_arg(arg);
         }
-        at.push_arg(&ctx.arg);
+        tf.push_arg(&ctx.arg);
 
-        let ident = func.gen_definition("Arg", at);
-        inside.make_expr(&Context::with_arg(ident), func)
-    }
-}
-
-#[derive(Debug)]
-pub struct Repeat {
-    pub args: Vec<String>,
-}
-
-impl ITransform for Repeat {
-    fn wrap(
-        &self,
-        ctx: &Context,
-        func: &mut glsl::Function,
-        inside: &impl MakeExpr,
-        _: TypeMarker,
-    ) -> glsl::Expr {
-        let mut at = glsl::FunctionCall::new("repeat");
-        for arg in &self.args {
-            at.push_arg(arg);
-        }
-        at.push_arg(&ctx.arg);
-
-        let ident = func.gen_definition("Arg", at);
+        let ident = func.gen_definition("Arg", tf);
         inside.make_expr(&Context::with_arg(ident), func)
     }
 }
@@ -121,29 +92,5 @@ impl ITransform for Scale {
             }
         }
         .into()
-    }
-}
-
-#[derive(Debug)]
-pub struct AtT {
-    pub args: Vec<String>,
-}
-
-impl ITransform for AtT {
-    fn wrap(
-        &self,
-        ctx: &Context,
-        func: &mut glsl::Function,
-        inside: &impl MakeExpr,
-        _: TypeMarker,
-    ) -> glsl::Expr {
-        let mut at = glsl::FunctionCall::new("at_t");
-        for arg in &self.args {
-            at.push_arg(arg);
-        }
-        at.push_arg(&ctx.arg);
-
-        let ident = func.gen_definition("Arg", at);
-        inside.make_expr(&Context::with_arg(ident), func)
     }
 }

@@ -41,6 +41,23 @@ Arg repeat(float x, float y, float z, Arg arg) {
     return vrepeat(vec3(x,y,z), arg);
 }
 
+Arg rotate(vec3 axis, float angle, Arg arg) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    mat4 rotation_matrix = 
+        mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
+
+    vec4 p = rotation_matrix * vec4(arg.p, 1);
+    arg.p = p.xyz / p.w;
+    return arg;
+}
+
 // time transforms
 
 Arg at_t(float t, Arg arg) {
