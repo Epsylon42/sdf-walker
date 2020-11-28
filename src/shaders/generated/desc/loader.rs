@@ -34,7 +34,12 @@ impl SceneDescLoader {
     }
 
     pub fn load_if_updated(&mut self) -> Option<anyhow::Result<SceneDesc>> {
-        let modified = std::fs::metadata(&self.file)
+        // sometimes fails, so repeat three times
+        let metadata = std::fs::metadata(&self.file)
+            .or_else(|_| std::fs::metadata(&self.file))
+            .or_else(|_| std::fs::metadata(&self.file));
+
+        let modified = metadata
             .expect("Could not read file metadata")
             .modified()
             .expect("Modified time not supported");
