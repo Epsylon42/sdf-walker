@@ -1,5 +1,5 @@
 use super::*;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 impl CtxDetails for GlutinSurface {
     type FbCol = ();
@@ -104,6 +104,7 @@ where
                         } else {
                             (*pos, camera)
                         };
+                        *pos = cam_pos;
 
                         iface.set(&uni.aspect, size[0] as f32 / size[1] as f32);
                         iface.set(&uni.fov, fov);
@@ -154,9 +155,11 @@ where
         Ctx: 'static,
         Col: 'static,
     {
+        let mut paused = false;
         let mut start = Instant::now();
         let mut prev = Instant::now();
         let mut now = Instant::now();
+        let mut offset = 0.0;
         let mut delta = 0.0;
 
         el.run(move |event, _, ctl| {
@@ -187,8 +190,12 @@ where
 
                 Event::RedrawRequested(_) | Event::NewEvents(_) => {
                     now = Instant::now();
-                    delta = (now - prev).as_secs_f32();
-                    let t = (now - start).as_secs_f32();
+                    let delta_duration = now - prev;
+                    if paused {
+                        start += delta_duration;
+                    }
+                    delta = delta_duration.as_secs_f32();
+                    let t = (now - start).as_secs_f32() + offset;
 
                     self.update_scene_if_necessary();
                     self.draw(t);
@@ -237,18 +244,6 @@ where
                     WindowEvent::KeyboardInput {
                         input:
                             KeyboardInput {
-                                virtual_keycode: Some(VirtualKeyCode::R),
-                                state: ElementState::Released,
-                                ..
-                            },
-                        ..
-                    } => {
-                        start = now;
-                    }
-
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
                                 virtual_keycode: Some(key),
                                 state,
                                 ..
@@ -256,10 +251,28 @@ where
                         ..
                     } => {
                         match state {
-                            ElementState::Pressed => self.pressed_keys.insert(key),
-                            ElementState::Released => self.pressed_keys.remove(&key),
+                            ElementState::Pressed => {
+                                self.pressed_keys.insert(key);
+
+                                match key {
+                                    VirtualKeyCode::R => start = now,
+                                    VirtualKeyCode::P => {
+                                        let t = (now - start).as_secs_f32();
+
+                                        eprintln!("position = {}time={}\n\n", self.pos, t);
+                                    }
+                                    VirtualKeyCode::Add => offset += 0.5,
+                                    VirtualKeyCode::Subtract => offset = (offset - 0.5f32).max(0f32),
+                                    VirtualKeyCode::Space => paused = !paused,
+                                    _ => {}
+                                }
+                            }
+
+                            ElementState::Released => {
+                                self.pressed_keys.remove(&key);
+                            }
                         };
-                    }
+                    } 
 
                     WindowEvent::Resized(size) => {
                         self.size = [size.width, size.height];

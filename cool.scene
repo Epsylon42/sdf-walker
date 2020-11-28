@@ -15,6 +15,9 @@ union {
 };
 
 camera {
+    marker(room, 0,0,0);
+    marker(upper_room, 0,400,0);
+
     keyframe(0) {
         pos(-50, 1, 0);
         look_at(0,0,0);
@@ -22,6 +25,16 @@ camera {
 
     keyframe(20) {
         pos(-10, 1, 0);
+    };
+
+    keyframe(28);
+    keyframe(29) {
+        pos (0,2,0);
+        euler(-20,-90,0, degrees);
+    };
+
+    keyframe(50) {
+        pos($upper_room, 0,0,0);
     };
 };
 

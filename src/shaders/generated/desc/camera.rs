@@ -1,6 +1,12 @@
 use super::Statement;
 
-mod keyframe_funcs;
+use std::collections::HashMap;
+
+mod keyframe;
+mod marker;
+
+use keyframe::{Keyframe, KeyframeError};
+use marker::MarkerError;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Param<T: Clone + Copy> {
@@ -47,50 +53,48 @@ impl Default for Rotation {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Keyframe {
-    t: f32,
-    pos: Param<glm::Vec3>,
-    rot: Param<Rotation>,
-}
-
-impl Keyframe {
-    fn new(stmt: Statement) -> Keyframe {
-        keyframe_funcs::parse_keyframe(stmt)
-    }
-}
-
-impl Default for Keyframe {
-    fn default() -> Self {
-        Keyframe {
-            t: 0.0,
-            pos: Param::Reuse,
-            rot: Param::Reuse,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct CameraDesc {
     timeline: Vec<Keyframe>,
+    markers: HashMap<String, glm::Vec3>,
 }
 
 impl Default for CameraDesc {
     fn default() -> Self {
         CameraDesc {
             timeline: Vec::new(),
+            markers: HashMap::new(),
         }
     }
 }
 
 impl CameraDesc {
-    pub fn new(stmt: Statement) -> CameraDesc {
+    pub fn new(stmt: Statement) -> Result<CameraDesc, CameraDescError> {
         assert_eq!(stmt.name, "camera");
         assert!(stmt.args.is_empty(), "Camera does not take arguments");
 
-        CameraDesc {
-            timeline: stmt.body.into_iter().map(Keyframe::new).collect(),
+        let mut timeline = Vec::new();
+        let mut markers = HashMap::new();
+
+        for stmt in stmt.body {
+            match stmt.name.as_str() {
+                "keyframe" => timeline.push(Keyframe::new(stmt)?),
+                "marker" => {
+                    let (k, v) = marker::parse_marker(stmt)?;
+                    markers.insert(k, v);
+                }
+
+                x => return Err(CameraDescError::UnknownStatement(x.into()))
+            }
         }
+
+        Ok(
+            CameraDesc {
+                timeline,
+                markers,
+            }
+        )
     }
 
     pub fn duration(&self) -> f32 {
@@ -104,8 +108,8 @@ impl CameraDesc {
     pub fn get_pos_at_frame(&self, frame: usize) -> glm::Vec3 {
         match self.timeline.len() {
             0 => Default::default(),
-            1 => self.timeline[0].pos.get(),
-            _ => match self.timeline[frame].pos {
+            1 => self.timeline[0].pos_with_marker(&self.markers).get(),
+            _ => match self.timeline[frame].pos_with_marker(&self.markers) {
                 Param::Override(x) => x,
                 Param::Reuse if frame == 0 => Default::default(),
                 Param::Reuse => self.get_pos_at_frame(frame - 1),
@@ -116,8 +120,8 @@ impl CameraDesc {
     pub fn get_rot_at_frame(&self, frame: usize) -> Rotation {
         match self.timeline.len() {
             0 => Default::default(),
-            1 => self.timeline[0].rot.get(),
-            _ => match self.timeline[frame].rot {
+            1 => self.timeline[0].rot_with_marker(&self.markers).get(),
+            _ => match self.timeline[frame].rot_with_marker(&self.markers) {
                 Param::Override(x) => x,
                 Param::Reuse if frame == 0 => Default::default(),
                 Param::Reuse => self.get_rot_at_frame(frame - 1),
@@ -159,4 +163,14 @@ impl CameraDesc {
             (pos, rot)
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CameraDescError {
+    #[error("Unknown statement: '{}'", .0)]
+    UnknownStatement(String),
+    #[error("{}", .0)]
+    Keyframe(#[from] KeyframeError),
+    #[error("{}", .0)]
+    Marker(#[from] MarkerError),
 }

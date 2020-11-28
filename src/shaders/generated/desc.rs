@@ -9,7 +9,7 @@ use super::typed::*;
 pub mod camera;
 pub mod loader;
 
-use camera::CameraDesc;
+use camera::{CameraDesc, CameraDescError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SceneDescError {
@@ -19,6 +19,8 @@ pub enum SceneDescError {
     StatementError(#[from] StatementError),
     #[error("Duplicate camera")]
     DuplicateCamera,
+    #[error("{}", .0)]
+    CameraError(#[from] CameraDescError),
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +55,7 @@ impl SceneDesc {
                     if camera.is_some() {
                         return Err(SceneDescError::DuplicateCamera)
                     } else {
-                        camera = Some(CameraDesc::new(stmt))
+                        camera = Some(CameraDesc::new(stmt)?)
                     }
                 }
                 _ => fold.body.push(stmt),
