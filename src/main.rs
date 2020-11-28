@@ -29,47 +29,44 @@ mod shaders;
 use shaders::*;
 
 fn main() {
-    let source = std::fs::read(
-        std::env::args()
-            .nth(1)
-            .unwrap_or_else(|| String::from("test.scene")),
-    )
-    .unwrap();
+    let source_path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| String::from("test.scene"));
 
-    let mut scene = SceneDesc::parse(&source);
+    let mut loader = SceneDescLoader::new(source_path);
 
     for arg in std::env::args().skip(2).chain(std::iter::once("".into())) {
         match arg.as_str() {
             "nocamera" => {
-                scene.camera = None;
+                loader.switch_camera(false);
             }
 
             "interactive" => {
-                let (app, el) = new_app([800, 600], scene);
+                let (app, el) = new_app([800, 600], loader);
                 app.run(el);
             }
 
             _ => {
-                let duration = scene
-                    .camera
-                    .as_ref()
-                    .map(|cam| cam.duration().ceil())
-                    .unwrap_or(10.0) as usize;
+                //let duration = scene
+                    //.camera
+                    //.as_ref()
+                    //.map(|cam| cam.duration().ceil())
+                    //.unwrap_or(10.0) as usize;
 
-                let (mut app, _) = new_app_offscreen([800, 600], scene);
+                //let (mut app, _) = new_app_offscreen([800, 600], scene);
 
-                let fps = 24;
+                //let fps = 24;
 
-                let stdout = std::io::stdout();
-                let mut stdout = stdout.lock();
+                //let stdout = std::io::stdout();
+                //let mut stdout = stdout.lock();
 
-                for i in 0..(fps * duration) {
-                    use std::io::Write;
+                //for i in 0..(fps * duration) {
+                    //use std::io::Write;
 
-                    app.draw(i as f32 / fps as f32);
-                    stdout.write_all(&app.to_image().into_raw()).unwrap();
-                }
-                return;
+                    //app.draw(i as f32 / fps as f32);
+                    //stdout.write_all(&app.to_image().into_raw()).unwrap();
+                //}
+                //return;
             }
         }
     }
@@ -165,6 +162,7 @@ where
     Ctx::Backend: backend::shader::Shader,
     Col: ColorSlot<Ctx::Backend, Dim2>,
 {
+    scene_loader: Option<SceneDescLoader>,
     scene: SceneDesc,
 
     surface: Ctx,
@@ -250,6 +248,33 @@ where
         surface.swap_buffers();
     }
 
+    pub fn update_scene_if_necessary(&mut self) {
+        let new_scene = self.scene_loader
+            .as_mut()
+            .and_then(|loader| loader.load_if_updated());
+
+        match new_scene {
+            Some(Ok(new_scene)) => {
+                match new_scene.get_program(&mut self.surface) {
+                    Ok(new_program) => {
+                        self.scene = new_scene;
+                        self.program = new_program;
+                    }
+
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
+                }
+            }
+
+            Some(Err(e)) => {
+                eprintln!("{}", e);
+            }
+
+            None => {}
+        }
+    }
+
     pub fn run(mut self, el: EventLoop<()>) -> !
     where
         Ctx: 'static,
@@ -290,6 +315,8 @@ where
                     now = Instant::now();
                     delta = (now - prev).as_secs_f32();
                     let t = (now - start).as_secs_f32();
+
+                    self.update_scene_if_necessary();
                     self.draw(t);
                     prev = now;
                 }
@@ -397,7 +424,8 @@ fn new_app_offscreen(
         .unwrap();
 
     let app = App {
-        program: scene.get_program(&mut surface),
+        scene_loader: None,
+        program: scene.get_program(&mut surface).unwrap(),
         scene,
 
         surface,
@@ -418,7 +446,7 @@ fn new_app_offscreen(
     (app, el)
 }
 
-fn new_app(size: [u32; 2], scene: SceneDesc) -> (App<GlutinSurface, ()>, EventLoop<()>) {
+fn new_app(size: [u32; 2], mut scene_loader: SceneDescLoader) -> (App<GlutinSurface, ()>, EventLoop<()>) {
     let (mut surface, el) = GlutinSurface::new_gl33_from_builders(
         |_, wb| wb.with_inner_size(glutin::dpi::Size::Physical(size.into())),
         |_, cb| cb,
@@ -436,8 +464,11 @@ fn new_app(size: [u32; 2], scene: SceneDesc) -> (App<GlutinSurface, ()>, EventLo
         .build()
         .unwrap();
 
+    let scene = scene_loader.load().unwrap();
+
     let app = App {
-        program: scene.get_program(&mut surface),
+        scene_loader: Some(scene_loader),
+        program: scene.get_program(&mut surface).unwrap(),
         scene,
 
         surface,

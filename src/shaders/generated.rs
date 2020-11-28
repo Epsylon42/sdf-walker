@@ -5,7 +5,7 @@ mod desc;
 mod parser;
 mod typed;
 
-pub use desc::SceneDesc;
+pub use desc::{SceneDesc, loader::SceneDescLoader};
 
 pub struct GeneratedScene {
     pub source: PathBuf,

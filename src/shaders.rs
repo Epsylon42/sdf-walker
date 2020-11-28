@@ -4,12 +4,16 @@ use luminance::shader::{Program, UniformInterface};
 
 mod generated;
 
-pub use generated::{GeneratedScene, SceneDesc};
+pub use generated::*;
+
+#[derive(Debug, thiserror::Error)]
+#[error("{}", .0)]
+pub struct GetProgramError(#[from] luminance::shader::ProgramError);
 
 pub trait ShaderProvider {
     fn get_sources(&self) -> [String; 2];
 
-    fn get_program<C, S, Out, Uni>(&self, ctx: &mut C) -> Program<C::Backend, S, Out, Uni>
+    fn get_program<C, S, Out, Uni>(&self, ctx: &mut C) -> Result<Program<C::Backend, S, Out, Uni>, GetProgramError>
     where
         C: GraphicsContext,
         C::Backend: Shader,
@@ -18,9 +22,10 @@ pub trait ShaderProvider {
     {
         let [vertex, fragment] = self.get_sources();
 
-        ctx.new_shader_program()
-            .from_strings(&vertex, None, None, &fragment)
-            .unwrap()
-            .ignore_warnings()
+        let program = ctx.new_shader_program()
+            .from_strings(&vertex, None, None, &fragment)?
+            .ignore_warnings();
+
+        Ok(program)
     }
 }

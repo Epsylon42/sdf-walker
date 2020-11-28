@@ -5,8 +5,19 @@ use super::parser;
 use super::typed::*;
 
 pub mod camera;
+pub mod loader;
 
 use camera::CameraDesc;
+
+#[derive(Debug, thiserror::Error)]
+pub enum SceneDescError {
+    #[error("Parse error")]
+    ParseError,
+    #[error("{}", .0)]
+    StatementError(#[from] StatementError),
+    #[error("Duplicate camera")]
+    DuplicateCamera,
+}
 
 #[derive(Debug, Clone)]
 pub struct SceneDesc {
@@ -16,12 +27,13 @@ pub struct SceneDesc {
 }
 
 impl SceneDesc {
-    pub fn parse(source: &[u8]) -> Self {
-        let statements = parser::scene(source).unwrap().1;
+    pub fn parse(source: &[u8]) -> Result<Self, SceneDescError> {
+        let statements = parser::scene(source)
+            .map_err(|_| SceneDescError::ParseError)?.1;
         Self::from_statements(statements)
     }
 
-    pub fn from_statements(statements: Vec<Statement>) -> Self {
+    pub fn from_statements(statements: Vec<Statement>) -> Result<Self, SceneDescError> {
         let mut glsl = Glsl::new();
 
         let mut fold = Statement {
@@ -34,10 +46,10 @@ impl SceneDesc {
 
         for stmt in statements {
             match stmt.name.as_str() {
-                "define_geometry" => define_geometry(&mut glsl, stmt.args, stmt.body).unwrap(),
+                "define_geometry" => define_geometry(&mut glsl, stmt.args, stmt.body)?,
                 "camera" => {
                     if camera.is_some() {
-                        panic!("Duplicate camera");
+                        return Err(SceneDescError::DuplicateCamera)
                     } else {
                         camera = Some(CameraDesc::new(stmt))
                     }
@@ -46,17 +58,19 @@ impl SceneDesc {
             }
         }
 
-        let shape = fold.apply(&OpaqueVisitor).unwrap();
+        let shape = fold.apply(&OpaqueVisitor)?;
 
         let mut map = glsl.add_function("vec4", "map_impl", &[("Arg", "arg")]);
         let expr = shape.make_expr(&Context::new(), &mut map);
         map.ret(&mut glsl, expr);
 
-        SceneDesc {
-            vertex: GeneratedScene::get_vertex(),
-            fragment: GeneratedScene::compile_fragment(&glsl.to_string()),
-            camera,
-        }
+        Ok(
+            SceneDesc {
+                vertex: GeneratedScene::get_vertex(),
+                fragment: GeneratedScene::compile_fragment(&glsl.to_string()),
+                camera,
+            }
+        )
     }
 }
 
@@ -124,7 +138,8 @@ impl ToString for Statement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Statement error: {}", .0)]
 pub struct StatementError(String);
 
 impl Statement {
