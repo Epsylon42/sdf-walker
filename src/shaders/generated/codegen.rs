@@ -88,9 +88,33 @@ impl From<FunctionCall> for Expr {
     }
 }
 
-impl<T: Into<String>> From<T> for Expr {
-    fn from(t: T) -> Self {
-        Expr::String(t.into())
+pub struct RawString(String);
+
+impl RawString {
+    pub fn new(s: impl Into<String>) -> Self {
+        RawString(s.into())
+    }
+}
+
+pub struct ArgString(String);
+
+impl ArgString {
+    pub fn new(s: impl Into<String>, arg: impl Into<String>) -> Self {
+        let string = s.into().replace("$", &(arg.into() + "."));
+        ArgString(string)
+    }
+}
+
+
+impl From<RawString> for Expr {
+    fn from(s: RawString) -> Self {
+        Expr::String(s.0)
+    }
+}
+
+impl From<ArgString> for Expr {
+    fn from(s: ArgString) -> Self {
+        Expr::String(s.0)
     }
 }
 

@@ -2,6 +2,7 @@
 #![feature(box_syntax)]
 
 extern crate nalgebra_glm as glm;
+#[macro_use] extern crate lazy_static;
 
 use std::collections::HashSet;
 use std::time::Instant;
@@ -280,7 +281,7 @@ where
         Ctx: 'static,
         Col: 'static,
     {
-        let start = Instant::now();
+        let mut start = Instant::now();
         let mut prev = Instant::now();
         let mut now = Instant::now();
         let mut delta = 0.0;
@@ -358,6 +359,18 @@ where
                     } => {
                         *ctl = ControlFlow::Exit;
                         return;
+                    }
+
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                virtual_keycode: Some(VirtualKeyCode::R),
+                                state: ElementState::Released,
+                                ..
+                            },
+                        ..
+                    } => {
+                        start = now;
                     }
 
                     WindowEvent::KeyboardInput {

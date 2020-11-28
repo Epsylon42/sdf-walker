@@ -1,4 +1,5 @@
 use super::*;
+use glsl::{ArgString, RawString};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct OpaqueMarker;
@@ -17,7 +18,7 @@ impl<G: IGeometry> MakeExpr for OpaqueShape<G> {
     fn make_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr {
         let mut vec4 = glsl::FunctionCall::new("vec4");
         for c in &self.color {
-            vec4.push_arg(c);
+            vec4.push_arg(ArgString::new(c, &ctx.arg));
         }
 
         vec4.push_arg(self.geometry.make_expr(ctx, func));
@@ -38,10 +39,10 @@ impl MakeExpr for NamedOpaqueShape {
     fn make_expr(&self, ctx: &Context, _: &mut glsl::Function) -> glsl::Expr {
         let mut func = glsl::FunctionCall::new(&self.name);
         for arg in &self.args {
-            func.push_arg(arg);
+            func.push_arg(ArgString::new(arg, &ctx.arg));
         }
 
-        func.push_arg(&ctx.arg);
+        func.push_arg(RawString::new(&ctx.arg));
 
         func.into()
     }

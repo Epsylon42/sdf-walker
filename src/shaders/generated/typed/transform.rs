@@ -1,4 +1,5 @@
 use super::*;
+use glsl::{ArgString, RawString};
 
 #[derive(Debug)]
 pub struct Transform<F, T, M> {
@@ -26,9 +27,9 @@ impl ITransform for FunctionTf {
     fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _typ: TypeMarker) -> glsl::Expr {
         let mut tf = glsl::FunctionCall::new(&self.func);
         for arg in &self.args {
-            tf.push_arg(arg);
+            tf.push_arg(ArgString::new(arg, &ctx.arg));
         }
-        tf.push_arg(&ctx.arg);
+        tf.push_arg(RawString::new(&ctx.arg));
 
         let ident = func.gen_definition("Arg", tf);
         inside.make_expr(&Context::with_arg(ident), func)
@@ -53,8 +54,8 @@ impl ITransform for Onionize {
 
         let mut onionize = glsl::FunctionCall::new("sd_onionize");
         assert_eq!(self.args.len(), 1);
-        onionize.push_arg(self.args[0].clone());
-        onionize.push_arg(expr_ident);
+        onionize.push_arg(ArgString::new(&self.args[0], &ctx.arg));
+        onionize.push_arg(RawString::new(expr_ident));
 
         onionize.into()
     }
@@ -74,13 +75,13 @@ impl ITransform for Scale {
         typ: TypeMarker,
     ) -> glsl::Expr {
         let mut scale = glsl::FunctionCall::new("uscale");
-        scale.push_arg(&self.args[0]);
-        scale.push_arg(&ctx.arg);
+        scale.push_arg(ArgString::new(&self.args[0], &ctx.arg));
+        scale.push_arg(RawString::new(&ctx.arg));
         let ident = func.gen_definition("Arg", scale);
 
         let expr = inside.make_expr(&Context::with_arg(ident), func);
 
-        match typ {
+        let s = match typ {
             TypeMarker::Geometry(_) => format!("(({}) * ({}))", expr.to_string(), self.args[0]),
             TypeMarker::Opaque(_) => {
                 let expr = func.gen_definition("vec4", expr);
@@ -90,7 +91,8 @@ impl ITransform for Scale {
                     scale = self.args[0]
                 )
             }
-        }
-        .into()
+        };
+
+        ArgString::new(s, &ctx.arg).into()
     }
 }

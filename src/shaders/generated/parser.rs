@@ -54,7 +54,7 @@ fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
 
 fn simple_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        bytes::take_while1(|b| is_alphanumeric(b) || b == b'.' || b == b'_' || b == b' '),
+        bytes::take_while1(|b| is_alphanumeric(b) || b == b'$' || b == b'.' || b == b'_' || b == b' '),
         |b: &[u8]| std::str::from_utf8(b).unwrap().trim().to_owned(),
     )(i)
 }

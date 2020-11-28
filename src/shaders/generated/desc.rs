@@ -1,5 +1,7 @@
 use crate::shaders::{GeneratedScene, ShaderProvider};
 
+use std::collections::HashSet;
+
 use super::codegen::Glsl;
 use super::parser;
 use super::typed::*;
@@ -147,6 +149,25 @@ impl Statement {
         &self,
         vis: &V,
     ) -> Result<V::Output, StatementError> {
+        lazy_static! {
+            static ref SIMPLE_FUNCTIONS: HashSet<&'static str> = {
+                let simple_functions = [
+                    "at",
+                    "rotate",
+                    "repeat",
+                    "at_t",
+                    "start_at_t",
+                    "end_at_t",
+                    "repeat_t",
+                    "map_t"
+                ];
+
+                simple_functions.iter()
+                    .cloned()
+                    .collect()
+            };
+        }
+
         let x = match self.name.as_str() {
             "union" => {
                 assert!(self.args.is_empty());
@@ -172,50 +193,6 @@ impl Statement {
                 )?
             }
 
-            "at" => {
-                assert!(self.args.len() == 1 || self.args.len() == 3);
-                vis.construct_transform(
-                    FunctionTf {
-                        func: String::from("at"),
-                        args: self.args.clone(),
-                    },
-                    vis.construct_fold(Union, vis.visit_body(self)?),
-                )
-            }
-
-            "rotate" => {
-                assert!(self.args.len() == 2);
-                vis.construct_transform(
-                    FunctionTf {
-                        func: String::from("rotate"),
-                        args: self.args.clone()
-                    },
-                    vis.construct_fold(Union, vis.visit_body(self)?),
-                )
-            }
-
-            "at_t" => {
-                assert!(self.args.len() == 1);
-                vis.construct_transform(
-                    FunctionTf {
-                        func: String::from("at_t"),
-                        args: self.args.clone(),
-                    },
-                    vis.construct_fold(Union, vis.visit_body(self)?),
-                )
-            }
-
-            "repeat" => {
-                assert!(self.args.len() == 1 || self.args.len() == 3);
-                vis.construct_transform(
-                    FunctionTf {
-                        func: String::from("repeat"),
-                        args: self.args.clone(),
-                    },
-                    vis.construct_fold(Union, vis.visit_body(self)?),
-                )
-            }
-
             "onionize" => {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
@@ -230,6 +207,16 @@ impl Statement {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
                     Scale {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
+            x if SIMPLE_FUNCTIONS.contains(x) => {
+                vis.construct_transform(
+                    FunctionTf {
+                        func: String::from(x),
                         args: self.args.clone(),
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),

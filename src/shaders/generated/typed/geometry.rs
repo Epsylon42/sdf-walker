@@ -1,4 +1,5 @@
 use super::*;
+use glsl::{ArgString, RawString};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GeometryMarker;
@@ -17,10 +18,10 @@ impl MakeExpr for NamedGeometry {
     fn make_expr(&self, ctx: &Context, _: &mut glsl::Function) -> glsl::Expr {
         let mut func = glsl::FunctionCall::new(&self.name);
         for arg in &self.args {
-            func.push_arg(arg);
+            func.push_arg(ArgString::new(arg, &ctx.arg));
         }
 
-        func.push_arg(&ctx.arg);
+        func.push_arg(RawString::new(&ctx.arg));
 
         func.into()
     }

@@ -65,6 +65,26 @@ Arg at_t(float t, Arg arg) {
     return arg;
 }
 
+Arg start_at_t(float min_t, Arg arg) {
+    arg.t = max(min_t, arg.t);
+    return arg;
+}
+
+Arg end_at_t(float max_t, Arg arg) {
+    arg.t = min(max_t, arg.t);
+    return arg;
+}
+
+Arg repeat_t(float interval, Arg arg) {
+    arg.t = mod(arg.t, interval);
+    return arg;
+}
+
+Arg map_t(float start_in, float end_in, float start_out, float end_out, Arg arg) {
+    arg.t = mix(start_out, end_out, (arg.t - start_in) / (end_in - start_in));
+    return arg;
+}
+
 
 // shape transforms
 float sd_union(float a, float b) {
