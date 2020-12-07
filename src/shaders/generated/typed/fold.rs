@@ -1,5 +1,5 @@
 use super::*;
-use glsl::RawString;
+use glsl::{RawString, ArgString};
 
 #[derive(Debug)]
 pub struct Fold<F, T, M> {
@@ -24,6 +24,9 @@ impl<F: IFunc, T: MakeExpr, M: ITypeMarker> MakeExpr for Fold<F, T, M> {
                     let mut next_expr = glsl::FunctionCall::new(func_name);
                     next_expr.push_arg(expr);
                     next_expr.push_arg(item.make_expr(ctx, func));
+                    for extra_arg in self.func.extra_args() {
+                        next_expr.push_arg(ArgString::new(extra_arg, &ctx.arg));
+                    }
                     expr = next_expr.into()
                 }
 

@@ -96,3 +96,56 @@ impl ITransform for Scale {
         ArgString::new(s, &ctx.arg).into()
     }
 }
+
+#[derive(Debug)]
+pub struct AdvancedRepeat {
+    pub args: Vec<String>,
+}
+
+impl ITransform for AdvancedRepeat {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, typ: TypeMarker) -> glsl::Expr {
+        let mut fold = Fold {
+            func: Union,
+            items: Vec::new(),
+            marker: typ,
+        };
+
+        for x in -1..=1 {
+            if x != 0 && self.args[0] == "0" {
+                continue;
+            }
+
+            for y in -1..=1 {
+                if y != 0 && self.args[1] == "0" {
+                    continue;
+                }
+
+                for z in -1..=1 {
+                    if z != 0 && self.args[2] == "0" {
+                        continue;
+                    }
+
+                    let offset = self.args.iter().zip(&[x, y, z])
+                        .map(|(repeat_offset, mult)| format!("(({}) * ({}))", repeat_offset, mult))
+                        .collect::<Vec<_>>();
+
+                    let item = Transform {
+                        tf: FunctionTf { func: String::from("at"), args: offset },
+                        item: inside,
+                        marker: typ,
+                    };
+
+                    fold.items.push(item);
+                }
+            }
+        }
+
+        let repeat = Transform {
+            tf: FunctionTf { func: String::from("repeat"), args: self.args.clone() },
+            item: fold,
+            marker: typ,
+        };
+
+        repeat.make_expr(ctx, func)
+    }
+}

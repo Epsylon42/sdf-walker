@@ -186,6 +186,21 @@ impl Statement {
                 vis.construct_fold(Diff, vis.visit_body(self)?)
             }
 
+            "smooth_union" => {
+                assert_eq!(self.args.len(), 1);
+                vis.construct_fold(SmoothUnion{ args: self.args.clone() }, vis.visit_body(self)?)
+            }
+
+            "advanced_repeat" => {
+                assert_eq!(self.args.len(), 3);
+                vis.construct_transform(
+                    AdvancedRepeat {
+                        args: self.args.clone()
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?)
+                )
+            }
+
             "opaque" => {
                 let geom = GeometryVisitor;
 

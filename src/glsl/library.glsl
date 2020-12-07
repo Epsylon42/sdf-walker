@@ -103,6 +103,12 @@ float sd_onionize(float thick, float a) {
     return sd_diff(a, a + thick);
 }
 
+float sd_smooth_union(float a, float b, float k)
+{
+    float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+    return mix( b, a, h ) - k*h*(1.0-h);
+}
+
 vec4 csd_union(vec4 a, vec4 b) {
     return a.w < b.w ? a : b;
 }

@@ -65,6 +65,10 @@ pub struct Union;
 pub struct Isect;
 #[derive(Debug, Clone, Copy)]
 pub struct Diff;
+#[derive(Debug, Clone)]
+pub struct SmoothUnion {
+    pub args: Vec<String>
+}
 
 impl IFunc for Union {
     fn name(&self, typ: TypeMarker) -> &'static str {
@@ -108,5 +112,23 @@ impl IFunc for Diff {
             TypeMarker::Geometry(_) => "1.0/0.0",
             TypeMarker::Opaque(_) => "vec3(0,0,0, 1.0/0.0)",
         }
+    }
+}
+
+impl IFunc for SmoothUnion {
+    fn name(&self, typ: TypeMarker) -> &'static str {
+        match typ {
+            TypeMarker::Geometry(_) => "sd_smooth_union",
+            TypeMarker::Opaque(_) => "csd_smooth_union",
+        }
+    }
+    fn id(&self, typ: TypeMarker) -> &'static str {
+        match typ {
+            TypeMarker::Geometry(_) => "1.0/0.0",
+            TypeMarker::Opaque(_) => "vec3(0,0,0, 1.0/0.0)",
+        }
+    }
+    fn extra_args(&self) -> &[String] {
+        &self.args
     }
 }
