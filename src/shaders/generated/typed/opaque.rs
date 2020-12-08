@@ -47,3 +47,16 @@ impl MakeExpr for NamedOpaqueShape {
         func.into()
     }
 }
+
+#[derive(Debug)]
+pub struct RawOpaque {
+    pub expr: String,
+}
+
+impl IOpaqueShape for RawOpaque {}
+
+impl MakeExpr for RawOpaque {
+    fn make_expr(&self, ctx: &Context, _: &mut glsl::Function) -> glsl::Expr {
+        ArgString::new(&self.expr, &ctx.arg).into()
+    }
+}

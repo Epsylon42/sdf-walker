@@ -26,3 +26,16 @@ impl MakeExpr for NamedGeometry {
         func.into()
     }
 }
+
+#[derive(Debug)]
+pub struct RawGeometry {
+    pub expr: String,
+}
+
+impl IGeometry for RawGeometry {}
+
+impl MakeExpr for RawGeometry {
+    fn make_expr(&self, ctx: &Context, _: &mut glsl::Function) -> glsl::Expr {
+        ArgString::new(&self.expr, &ctx.arg).into()
+    }
+}

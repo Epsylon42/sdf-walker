@@ -171,6 +171,11 @@ impl Statement {
         }
 
         let x = match self.name.as_str() {
+            "raw" => {
+                assert_eq!(self.args.len(), 1);
+                vis.construct_raw(self.args[0].clone())
+            }
+
             "union" => {
                 assert!(self.args.is_empty());
                 vis.construct_fold(Union, vis.visit_body(self)?)
@@ -254,6 +259,7 @@ pub trait StatementVisitor {
     type Output;
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output;
+    fn construct_raw(&self, expr: String) -> Self::Output;
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output;
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output;
 
@@ -280,6 +286,10 @@ impl StatementVisitor for GeometryVisitor {
         box NamedGeometry { name, args }
     }
 
+    fn construct_raw(&self, expr: String) -> Self::Output {
+        box RawGeometry { expr }
+    }
+
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
         box Fold {
             func,
@@ -303,6 +313,10 @@ impl StatementVisitor for OpaqueVisitor {
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
         box NamedOpaqueShape { name, args }
+    }
+
+    fn construct_raw(&self, expr: String) -> Self::Output {
+        box RawOpaque { expr }
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
