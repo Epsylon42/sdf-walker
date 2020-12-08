@@ -49,4 +49,4 @@ pub trait IFunc: Debug + 'static {
     }
 }
 
-pub trait ITypeMarker: Into<TypeMarker> + Debug + 'static + Copy {}
+pub trait ITypeMarker: Into<TypeMarker> + Debug + Copy + 'static {}

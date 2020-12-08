@@ -50,7 +50,8 @@ impl SceneDesc {
 
         for stmt in statements {
             match stmt.name.as_str() {
-                "define_geometry" => define_geometry(&mut glsl, stmt.args, stmt.body)?,
+                "define_geometry" => define_object(&mut glsl, stmt, GeometryVisitor)?,
+                "define_opaque" => define_object(&mut glsl, stmt, OpaqueVisitor)?,
                 "camera" => {
                     if camera.is_some() {
                         return Err(SceneDescError::DuplicateCamera)
@@ -84,27 +85,25 @@ impl ShaderProvider for SceneDesc {
     }
 }
 
-fn define_geometry(
+fn define_object(
     glsl: &mut Glsl,
-    args: Vec<String>,
-    body: Vec<Statement>,
+    stmt: Statement,
+    visitor: impl StatementVisitor,
 ) -> Result<(), StatementError> {
-    if args.is_empty() {
-        return Err(StatementError(
-            "define_geometry requires at least one argument".into(),
-        ));
+    if stmt.args.is_empty() {
+        return Err(StatementError(format!("{} requires at least one argument", stmt.name)));
     }
 
     let fold = Statement {
         name: String::from("union"),
         args: Vec::new(),
-        body,
+        body: stmt.body,
     };
 
-    let geometry = fold.apply(&GeometryVisitor)?;
+    let object = fold.apply(&visitor)?;
 
-    let name = &args[0];
-    let args = args
+    let name = &stmt.args[0];
+    let args = stmt.args
         .iter()
         .skip(1)
         .map(|arg| {
@@ -115,8 +114,9 @@ fn define_geometry(
         .chain(std::iter::once(("Arg", "arg")))
         .collect::<Vec<_>>();
 
-    let mut func = glsl.add_function("float", name, &args);
-    let expr = geometry.make_expr(&Context::new(), &mut func);
+    let type_name = visitor.get_type_marker().typ();
+    let mut func = glsl.add_function(type_name, name, &args);
+    let expr = object.make_expr(&Context::new(), &mut func);
     func.ret(glsl, expr);
 
     Ok(())
@@ -256,7 +256,9 @@ impl Statement {
 }
 
 pub trait StatementVisitor {
-    type Output;
+    type Output: MakeExpr;
+
+    fn get_type_marker(&self) -> TypeMarker;
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output;
     fn construct_raw(&self, expr: String) -> Self::Output;
@@ -281,6 +283,10 @@ pub trait StatementVisitor {
 pub struct GeometryVisitor;
 impl StatementVisitor for GeometryVisitor {
     type Output = Box<dyn IGeometry>;
+
+    fn get_type_marker(&self) -> TypeMarker {
+        TypeMarker::Geometry(GeometryMarker)
+    }
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
         box NamedGeometry { name, args }
@@ -310,6 +316,10 @@ impl StatementVisitor for GeometryVisitor {
 pub struct OpaqueVisitor;
 impl StatementVisitor for OpaqueVisitor {
     type Output = Box<dyn IOpaqueShape>;
+
+    fn get_type_marker(&self) -> TypeMarker {
+        TypeMarker::Opaque(OpaqueMarker)
+    }
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
         box NamedOpaqueShape { name, args }

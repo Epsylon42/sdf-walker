@@ -39,7 +39,7 @@ pub enum TypeMarker {
 impl ITypeMarker for TypeMarker {}
 
 impl TypeMarker {
-    fn typ(&self) -> &'static str {
+    pub fn typ(&self) -> &'static str {
         match self {
             TypeMarker::Geometry(_) => "float",
             TypeMarker::Opaque(_) => "vec4",
