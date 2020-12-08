@@ -40,10 +40,16 @@ impl SceneDesc {
     pub fn from_statements(statements: Vec<Statement>) -> Result<Self, SceneDescError> {
         let mut glsl = Glsl::new();
 
-        let mut fold = Statement {
+        let mut fold_opaque = Statement {
             name: String::from("union"),
             args: Vec::new(),
             body: Vec::new(),
+        };
+
+        let mut fold_transparent = Statement {
+            name: String::from("union"),
+            args: Vec::new(),
+            body: Vec::new()
         };
 
         let mut camera = None;
@@ -52,6 +58,7 @@ impl SceneDesc {
             match stmt.name.as_str() {
                 "define_geometry" => define_object(&mut glsl, stmt, GeometryVisitor)?,
                 "define_opaque" => define_object(&mut glsl, stmt, OpaqueVisitor)?,
+                "define_transparent" => define_object(&mut glsl, stmt, TransparentVisitor)?,
                 "camera" => {
                     if camera.is_some() {
                         return Err(SceneDescError::DuplicateCamera)
@@ -59,15 +66,26 @@ impl SceneDesc {
                         camera = Some(CameraDesc::new(stmt)?)
                     }
                 }
-                _ => fold.body.push(stmt),
+                _ => {
+                    if stmt.apply(&TransparentVisitor).is_ok() {
+                        fold_transparent.body.push(stmt);
+                    } else {
+                        fold_opaque.body.push(stmt);
+                    }
+                }
             }
         }
 
-        let shape = fold.apply(&OpaqueVisitor)?;
+        let opaque = fold_opaque.apply(&OpaqueVisitor)?;
+        let transparent = fold_transparent.apply(&TransparentVisitor)?;
 
         let mut map = glsl.add_function("vec4", "map_impl", &[("Arg", "arg")]);
-        let expr = shape.make_expr(&Context::new(), &mut map);
+        let expr = opaque.make_expr(&Context::new(), &mut map);
         map.ret(&mut glsl, expr);
+
+        let mut map_transparent = glsl.add_function("MapTransparent", "map_transparent_impl", &[("Arg", "arg")]);
+        let expr = transparent.make_expr(&Context::new(), &mut map_transparent);
+        map_transparent.ret(&mut glsl, expr);
 
         Ok(
             SceneDesc {
@@ -215,6 +233,15 @@ impl Statement {
                 )?
             }
 
+            "transparent" => {
+                let geom = GeometryVisitor;
+
+                vis.construct_transparent(
+                    self.args.clone(),
+                    geom.construct_fold(Union, geom.visit_body(self)?),
+                )?
+            }
+
             "onionize" => {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
@@ -272,6 +299,16 @@ pub trait StatementVisitor {
     ) -> Result<Self::Output, StatementError> {
         Err(StatementError(String::from(
             "cannot construct opaque shape",
+        )))
+    }
+
+    fn construct_transparent(
+        &self,
+        _color: Vec<String>,
+        _geometry: impl IGeometry,
+    ) -> Result<Self::Output, StatementError> {
+        Err(StatementError(String::from(
+            "cannot construct transparent shape",
         )))
     }
 
@@ -351,5 +388,42 @@ impl StatementVisitor for OpaqueVisitor {
         geometry: impl IGeometry,
     ) -> Result<Self::Output, StatementError> {
         Ok(box OpaqueShape { color, geometry })
+    }
+}
+
+pub struct TransparentVisitor;
+impl StatementVisitor for TransparentVisitor {
+    type Output = Box<dyn ITransparentShape>;
+
+    fn get_type_marker(&self) -> TypeMarker {
+        TypeMarker::Transparent(TransparentMarker)
+    }
+
+    fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
+        box NamedTransparentShape { name, args }
+    }
+
+    fn construct_raw(&self, expr: String) -> Self::Output {
+        box RawTransparent { expr }
+    }
+
+    fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
+        box Fold {
+            func,
+            items,
+            marker: TransparentMarker
+        }
+    }
+
+    fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
+        box Transform {
+            tf,
+            item,
+            marker: TransparentMarker,
+        }
+    }
+
+    fn construct_transparent(&self, color: Vec<String>, geometry: impl IGeometry) -> Result<Self::Output, StatementError> {
+        Ok(box TransparentShape { color, geometry })
     }
 }

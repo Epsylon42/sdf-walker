@@ -10,6 +10,7 @@ pub struct Transform<F, T, M> {
 
 impl<F: ITransform, T: IGeometry> IGeometry for Transform<F, T, GeometryMarker> {}
 impl<F: ITransform, T: IOpaqueShape> IOpaqueShape for Transform<F, T, OpaqueMarker> {}
+impl<F: ITransform, T: ITransparentShape> ITransparentShape for Transform<F, T, TransparentMarker> {}
 
 impl<F: ITransform, T: MakeExpr, M: ITypeMarker> MakeExpr for Transform<F, T, M> {
     fn make_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr {
@@ -84,9 +85,17 @@ impl ITransform for Scale {
         let s = match typ {
             TypeMarker::Geometry(_) => format!("(({}) * ({}))", expr.to_string(), self.args[0]),
             TypeMarker::Opaque(_) => {
-                let expr = func.gen_definition("vec4", expr);
+                let expr = func.gen_definition(typ.typ(), expr);
                 format!(
                     "vec4({expr}.xyz, {expr}.w * ({scale}))",
+                    expr = expr,
+                    scale = self.args[0]
+                )
+            }
+            TypeMarker::Transparent(_) => {
+                let expr = func.gen_definition(typ.typ(), expr);
+                format!(
+                    "MapTransparent({expr}.color, {expr}.d * ({scale}))",
                     expr = expr,
                     scale = self.args[0]
                 )

@@ -3,7 +3,7 @@ vec4 map(vec3 p) {
 }
 
 MapTransparent map_transparent(vec3 p) {
-    return MapTransparent(vec4(0), 1.0/0.0);
+    return map_transparent_impl(Arg(p, time));
 }
 
 vec3 normal(vec3 p, float d) {
@@ -20,6 +20,18 @@ const vec3 sky = vec3(0.24, 0.09, 0.4);
 const vec3 ambient = sky * 0.9;
 const float delta = 0.01;
 const float shadow_coef = 64;
+
+struct Shadow {
+    vec3 mask;
+    float shadow;
+};
+
+vec3 apply_mask(vec3 color, vec3 mask) {
+    if (length(1 - mask) > 1) {
+        mask = normalize(mask);
+    }
+    return color * mask;
+}
 
 float ambient_occlusion(vec3 pos, vec3 nrm) {
     const float max_dist = 10;
@@ -61,6 +73,7 @@ Shadow calc_shadow(vec3 pos) {
     float closest = 1.0;
 
     vec3 mask = vec3(1);
+
     for (float t = 0; t < 100;) {
         float od = map(pos + nlight * t).w;
         if (od < delta) {
@@ -71,6 +84,8 @@ Shadow calc_shadow(vec3 pos) {
         MapTransparent transparent = map_transparent(pos + nlight * t);
 
         if (transparent.d < delta) {
+            //mask += transparent.color.xyz * transparent.color.w * abs(transparent.d);
+            //mask = pow(mask, transparent.color.xyz * transparent.color.w / abs(transparent.d));
             mask -= transparent.color.xyz * transparent.color.w * abs(transparent.d);
             t += max(abs(transparent.d), delta);
         } else {

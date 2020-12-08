@@ -31,6 +31,14 @@ impl MakeExpr for Box<dyn IOpaqueShape> {
     }
 }
 
+pub trait ITransparentShape: MakeExpr + 'static {}
+impl ITransparentShape for Box<dyn ITransparentShape> {}
+impl MakeExpr for Box<dyn ITransparentShape> {
+    fn make_expr(&self, ctx: &Context, func: &mut glsl::Function) -> glsl::Expr {
+        MakeExpr::make_expr(&**self, ctx, func)
+    }
+}
+
 pub trait ITransform: Debug + 'static {
     fn wrap(
         &self,

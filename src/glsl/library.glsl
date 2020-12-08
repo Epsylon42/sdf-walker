@@ -3,6 +3,11 @@ struct Arg {
     float t;
 };
 
+struct MapTransparent {
+    vec4 color;
+    float d;
+};
+
 // utils
 float vmax(vec3 a) {
     return max(a.x, max(a.y, a.z));
@@ -117,6 +122,10 @@ vec4 csd_isect(vec4 a, vec4 b) {
     return a.w > b.w ? a : b;
 }
 
+MapTransparent tsd_union(MapTransparent a, MapTransparent b) {
+    return a.d < b.d ? a : b;
+}
+
 
 // shapes
 float sd_sphere(float r, Arg arg) {
@@ -142,21 +151,4 @@ float sd_column_aa(vec3 axis, float rad, Arg arg) {
     return sd_isect(
             sd_halfspace_aa(axis, vat(axis * rad, arg)), 
             sd_halfspace_aa(-axis, vat(-axis * rad, arg)));
-}
-
-struct Shadow {
-    vec3 mask;
-    float shadow;
-};
-
-struct MapTransparent {
-    vec4 color;
-    float d;
-};
-
-vec3 apply_mask(vec3 color, vec3 mask) {
-    if (length(1 - mask) > 1) {
-        mask = normalize(mask);
-    }
-    return color * mask;
 }
