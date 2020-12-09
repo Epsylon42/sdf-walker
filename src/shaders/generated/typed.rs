@@ -91,7 +91,7 @@ impl IFunc for Union {
     fn id(&self, typ: TypeMarker) -> &'static str {
         match typ {
             TypeMarker::Geometry(_) => "1.0/0.0",
-            TypeMarker::Opaque(_) => "vec3(0,0,0, 1.0/0.0)",
+            TypeMarker::Opaque(_) => "vec4(0,0,0, 1.0/0.0)",
             TypeMarker::Transparent(_) => "MapTransparent(vec4(0), 1.0/0.0)",
         }
     }
@@ -108,7 +108,7 @@ impl IFunc for Isect {
     fn id(&self, typ: TypeMarker) -> &'static str {
         match typ {
             TypeMarker::Geometry(_) => "0.0",
-            TypeMarker::Opaque(_) => "vec3(0,0,0, 0.0)",
+            TypeMarker::Opaque(_) => "vec4(0,0,0, 0.0)",
             TypeMarker::Transparent(_) => "MapTransparent(vec4(0), 0.0)",
         }
     }
@@ -125,7 +125,7 @@ impl IFunc for Diff {
     fn id(&self, typ: TypeMarker) -> &'static str {
         match typ {
             TypeMarker::Geometry(_) => "1.0/0.0",
-            TypeMarker::Opaque(_) => "vec3(0,0,0, 1.0/0.0)",
+            TypeMarker::Opaque(_) => "vec4(0,0,0, 1.0/0.0)",
             TypeMarker::Transparent(_) => "MapTransparent(vec4(0), 1.0/0.0)",
         }
     }
@@ -142,7 +142,7 @@ impl IFunc for SmoothUnion {
     fn id(&self, typ: TypeMarker) -> &'static str {
         match typ {
             TypeMarker::Geometry(_) => "1.0/0.0",
-            TypeMarker::Opaque(_) => "vec3(0,0,0, 1.0/0.0)",
+            TypeMarker::Opaque(_) => "vec4(0,0,0, 1.0/0.0)",
             TypeMarker::Transparent(_) => "MapTransparent(vec4(0), 1.0/0.0)",
         }
     }
