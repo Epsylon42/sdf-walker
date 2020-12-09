@@ -76,8 +76,14 @@ Shadow calc_shadow(vec3 pos) {
     vec3 nlight = -normalize(light);
     vec3 nrm = normal(pos, delta);
 
-    pos += normalize(screen_pos - pos) * delta * 4;
-    //pos += nrm * delta * 4;
+    float depth = map(pos).w;
+    if (depth < 0) {
+        pos -= nrm * depth;
+        nrm = normal(pos, delta);
+    }
+
+    //pos += normalize(screen_pos - pos) * delta * 4;
+    pos += nrm * delta * 4;
 
     float closest = 1.0;
 
