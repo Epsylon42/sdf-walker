@@ -5,21 +5,27 @@ use nom::{
     bytes::complete as bytes,
     character::{complete as character, is_alphabetic, is_alphanumeric},
     combinator::*,
-    multi::{many1, separated_list},
-    sequence::{delimited, tuple},
+    multi::{many0, many1, separated_list},
+    sequence::{delimited, tuple, terminated},
     IResult,
 };
 
 pub fn scene(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
-    all_consuming(separated_list_terminated(
-        &ws(character::char(';')),
-        statement,
-    ))(i)
+    all_consuming(many0(statement))(i)
 }
 
 fn statement(i: &[u8]) -> IResult<&[u8], Statement> {
+    
     map(
-        tuple((ident, opt(args), opt(body))),
+        tuple((
+            ident,
+            opt(args),
+            ws(opt(alt((
+                map(character::char(';'), |_| Vec::new()),
+                map(statement, |s| vec![s]),
+                terminated(block_body, opt(ws(character::char(';')))),
+            )))),
+        )),
         |(name, args, body)| Statement {
             name,
             args: args.unwrap_or_default(),
@@ -28,15 +34,12 @@ fn statement(i: &[u8]) -> IResult<&[u8], Statement> {
     )(i)
 }
 
-fn body(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
-    alt((
-        delimited(
-            ws(character::char('{')),
-            separated_list_terminated(&ws(character::char(';')), statement),
-            ws(character::char('}')),
-        ),
-        map(statement, |stmt| vec![stmt]),
-    ))(i)
+fn block_body(i: &[u8]) -> IResult<&[u8], Vec<Statement>> {
+    delimited(
+        ws(character::char('{')),
+        many0(statement),
+        ws(character::char('}')),
+    )(i)
 }
 
 fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
@@ -54,7 +57,9 @@ fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
 
 fn simple_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
-        bytes::take_while1(|b| is_alphanumeric(b) || b == b'$' || b == b'.' || b == b'_' || b == b' '),
+        bytes::take_while1(|b| {
+            is_alphanumeric(b) || b == b'$' || b == b'.' || b == b'_' || b == b' '
+        }),
         |b: &[u8]| std::str::from_utf8(b).unwrap().trim().to_owned(),
     )(i)
 }
@@ -75,19 +80,6 @@ fn args(i: &[u8]) -> IResult<&[u8], Vec<String>> {
         separated_list(ws(character::char(',')), complex_value),
         ws(character::char(')')),
     )(i)
-}
-
-fn separated_list_terminated<'a, 'b, O1: 'b, O2: 'b, E: 'b, P1: 'b, P2: 'b>(
-    sep: &'b P1,
-    parser: P2,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O2>, E> + 'b
-where
-    E: nom::error::ParseError<&'a [u8]>,
-    P1: Fn(&'a [u8]) -> IResult<&'a [u8], O1, E>,
-    P2: Fn(&'a [u8]) -> IResult<&'a [u8], O2, E>,
-    'a: 'b,
-{
-    map(tuple((separated_list(sep, parser), opt(sep))), |(a, _)| a)
 }
 
 fn ws<'a, O, E, P>(parser: P) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
@@ -152,9 +144,9 @@ mod test {
 
     #[test]
     fn test_body() {
-        assert_eq!(body(b"{}").unwrap().1.len(), 0);
+        assert_eq!(block_body(b"{}").unwrap().1.len(), 0);
 
-        let body = body(b"{ hello() {  } }").unwrap().1;
+        let body = block_body(b"{ hello() {  } }").unwrap().1;
         assert_eq!(body.len(), 1);
         assert_eq!(body[0].to_string(), "hello(){}");
     }
@@ -192,5 +184,25 @@ mod test {
 
         let stmt = statement(b"union { cube(); sphere(); }").unwrap().1;
         assert_eq!(stmt.to_string(), "union(){cube(){}; sphere(){}}");
+    }
+
+    #[test]
+    fn test_nosemi() {
+        let stmt = all_consuming(statement)(b"hello() { world{abc} }").unwrap().1;
+        assert_eq!(stmt.to_string(), "hello(){world(){abc(){}}}");
+
+        let stmt = all_consuming(statement)(b"hello() { world{} abc{} }").unwrap().1;
+        assert_eq!(stmt.to_string(), "hello(){world(){}; abc(){}}");
+
+        let body = all_consuming(block_body)(b"{ world{} abc{} }").unwrap().1;
+        assert_eq!(body.len(), 2);
+        assert_eq!(body[0].to_string(), "world(){}");
+        assert_eq!(body[1].to_string(), "abc(){}");
+    }
+
+    #[test]
+    fn test_semi() {
+        let body = all_consuming(block_body)(b"{ hello{}; world{}; }").unwrap().1;
+        assert_eq!(body.len(), 2);
     }
 }
