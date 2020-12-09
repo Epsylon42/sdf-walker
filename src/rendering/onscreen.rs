@@ -255,14 +255,17 @@ where
                                 self.pressed_keys.insert(key);
 
                                 match key {
-                                    VirtualKeyCode::R => start = now,
+                                    VirtualKeyCode::R => {
+                                        start = now;
+                                        offset = 0.0;
+                                    },
                                     VirtualKeyCode::P => {
-                                        let t = (now - start).as_secs_f32();
+                                        let t = (now - start).as_secs_f32() + offset;
 
                                         eprintln!("position = {}time={}\n\n", self.pos, t);
                                     }
                                     VirtualKeyCode::Add => offset += 0.5,
-                                    VirtualKeyCode::Subtract => offset = (offset - 0.5f32).max(0f32),
+                                    VirtualKeyCode::Subtract => offset -= 0.5,
                                     VirtualKeyCode::Space => paused = !paused,
                                     _ => {}
                                 }

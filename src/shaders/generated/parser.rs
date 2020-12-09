@@ -43,7 +43,7 @@ fn complex_value(i: &[u8]) -> IResult<&[u8], String> {
     map(
         many1(ws(alt((
             simple_value,
-            map(bytes::is_a("+-*/"), |b: &[u8]| {
+            map(bytes::is_a("+-*/%<>=!&|"), |b: &[u8]| {
                 String::from_utf8(b.to_owned()).unwrap()
             }),
             map(args, |args| format!("({})", args.join(", "))),

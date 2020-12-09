@@ -1,6 +1,7 @@
 use super::Statement;
 
 use std::collections::HashMap;
+use std::num::ParseFloatError;
 
 mod keyframe;
 mod marker;
@@ -77,9 +78,23 @@ impl CameraDesc {
         let mut timeline = Vec::new();
         let mut markers = HashMap::new();
 
+        let mut prev_t = 0.0;
+        let mut keyframe_offset = 0.0;
         for stmt in stmt.body {
             match stmt.name.as_str() {
-                "keyframe" => timeline.push(Keyframe::new(stmt)?),
+                "keyframe" => {
+                    let mut kf = Keyframe::new(stmt, prev_t)?;
+                    kf.t += keyframe_offset;
+                    prev_t = kf.t;
+                    timeline.push(kf);
+                },
+                "offset" => {
+                    if stmt.args.is_empty() {
+                        return Err(CameraDescError::NoArgs);
+                    }
+
+                    keyframe_offset += stmt.args[0].parse::<f32>()?;
+                },
                 "marker" => {
                     let (k, v) = marker::parse_marker(stmt)?;
                     markers.insert(k, v);
@@ -173,4 +188,8 @@ pub enum CameraDescError {
     Keyframe(#[from] KeyframeError),
     #[error("{}", .0)]
     Marker(#[from] MarkerError),
+    #[error("Offset must have at least one argument")]
+    NoArgs,
+    #[error("Failed to parse a number: {}", .0)]
+    NumberParseError(#[from] ParseFloatError)
 }

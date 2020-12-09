@@ -13,8 +13,8 @@ pub struct Keyframe {
 }
 
 impl Keyframe {
-    pub fn new(stmt: Statement) -> Result<Keyframe, KeyframeError> {
-        parse_keyframe(stmt)
+    pub fn new(stmt: Statement, prev_t: f32) -> Result<Keyframe, KeyframeError> {
+        parse_keyframe(stmt, prev_t)
     }
 
     pub fn pos_with_marker(&self, markers: &HashMap<String, glm::Vec3>) -> Param<glm::Vec3> {
@@ -57,13 +57,16 @@ impl Default for Keyframe {
     }
 }
 
-pub fn parse_keyframe(stmt: Statement) -> Result<Keyframe, KeyframeError> {
+pub fn parse_keyframe(stmt: Statement, prev_t: f32) -> Result<Keyframe, KeyframeError> {
     assert_eq!(stmt.name, "keyframe");
     if stmt.args.is_empty() {
         return Err(KeyframeError::NoArgs);
     }
 
-    let t = stmt.args[0].parse()?;
+    let mut t = stmt.args[0].parse()?;
+    if stmt.args.len() > 1 && stmt.args[1] == "+" {
+        t += prev_t;
+    }
 
     let mut marker = None;
     let mut pos = None;

@@ -149,6 +149,7 @@ camera {
         euler(0,-90,0);
     };
 
+    offset(6);
     keyframe(105);
 
     keyframe(106) {

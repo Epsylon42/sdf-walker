@@ -16,7 +16,6 @@ float vmin(vec3 a) {
     return min(a.x, min(a.y, a.z));
 }
 
-
 // space transforms
 Arg vat(vec3 shift, Arg arg) {
     arg.p -= shift;

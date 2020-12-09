@@ -1,0 +1,242 @@
+define_geometry(platform, float ir, float or) 
+intersection {
+    difference {
+        sd_box(vec3(or,0.5,or));
+        sd_sphere(ir);
+    };
+    sd_sphere(or);
+};
+
+define_geometry(torus, float r, float R) {
+    let(vec2, q, vec2(length($p.xz) - R, $p.y))
+    raw(length(q) - r);
+};
+
+define_geometry(miniplatform) 
+intersection {
+    sd_box(vec3(5,0.5,5));
+    sd_sphere(5);
+};
+
+define_geometry(spheres, float rad) {
+    rotate(vec3(0,1,0), $t)
+    at(0,-sin($t)*rad,rad) sd_sphere(2);
+
+    rotate(vec3(0,1,0), $t + 6.28 / 4)
+    at(0,-cos($t)*rad,rad) sd_sphere(2);
+
+    rotate(vec3(0,1,0), $t + 6.28 / 2)
+    at(0,sin($t)*rad,rad) sd_sphere(2);
+
+    rotate(vec3(0,1,0), $t + 6.28 / 4 * 3)
+    at(0,cos($t)*rad,rad) sd_sphere(2);
+
+    at_t($t * 2.1)
+    rotate(vec3(0,1,0), 6.28 / 8) {
+        rotate(vec3(0,1,0), $t)
+        at(0,-sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4)
+        at(0,-cos($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 2)
+        at(0,sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4 * 3)
+        at(0,cos($t)*rad,rad) sd_sphere(2);
+    };
+
+
+    rotate(vec3(0,1,0), 6.28 / 8){
+        rotate(vec3(0,1,0), $t)
+        at(0,sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4)
+        at(0,cos($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 2)
+        at(0,-sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4 * 3)
+        at(0,-cos($t)*rad,rad) sd_sphere(2);
+    };
+
+    at_t($t * 2.1)
+    rotate(vec3(0,1,0), 6.28 / 4){
+        rotate(vec3(0,1,0), $t)
+        at(0,sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4)
+        at(0,cos($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 2)
+        at(0,-sin($t)*rad,rad) sd_sphere(2);
+
+        rotate(vec3(0,1,0), $t + 6.28 / 4 * 3)
+        at(0,-cos($t)*rad,rad) sd_sphere(2);
+    };
+};
+
+let(float, collapse, 10)
+let(float, fire, 16) 
+let(float, fire_end, fire + 3)
+let(float, compression, fire_end + 2.5)
+let(float, close, compression + 3)
+let(float, explosion, close + 4)
+at_t(23)
+{
+    transparent(1,0,0, 1) {
+        cond($t < fire) 
+        {
+            cond($t < collapse)
+            at_t(10)
+            spheres(30);
+
+            cond($t >= collapse)
+            map_t(10, 15, 0, 5) start_at_t(0) end_at_t(5)
+            spheres(30 * (1 - $t/5));
+        };
+
+        cond($t >= fire)
+        map_t(fire, fire+3, 0, 1)
+        start_at_t(0) end_at_t(1)
+        sd_sphere(2 * pow(1 - $t, 2));
+    };
+
+    transparent(0,1,1, 0.2) {
+        map_t(fire+0.3, fire_end, 0, 5)
+        start_at_t(0) end_at_t(5.1)
+        cond($t > 0 && $t <= 5)
+        let(float, ease_part, (1 / ($t*$t + 1)))
+        sd_sphere(20.8 * (1 - ease_part));
+
+        cond($t > fire_end) 
+        {
+            cond($t <= compression)
+            at_t(fire_end)
+            sd_sphere(20 - $t * 2);
+
+            cond($t > compression && $t <= explosion)
+            at_t(compression)
+            sd_sphere(15 - sin($t * 2) * 0.5);
+
+            cond($t > explosion)
+            at_t(explosion)
+            sd_sphere(15 + pow($t * 4, 2));
+        };
+    };
+};
+
+let(float, collapse, 10)
+let(float, fire, 16) 
+let(float, fire_end, fire + 3)
+let(float, compression, fire_end + 2.5)
+let(float, close, compression + 3)
+let(float, explosion, close + 4)
+at_t(23)
+opaque(vec3(1)) {
+    cond($t <= close)
+    map_t(6, 10, 0, 1) start_at_t(0) end_at_t(1)
+    repeat(0,0.01,0)
+    at(0,sign(arg.p.y) * 2 * $t,0)
+    scale(max(0, abs(arg.p.y*arg.p.y / 400)))
+    sd_sphere(1);
+
+    cond($t > close)
+    map_t(close, explosion, 0, 1)
+    end_at_t(1)
+    repeat(0,0.01,0)
+    at(0,sign(arg.p.y) * 2 * (1 - $t),0)
+    scale(max(0, abs(arg.p.y*arg.p.y / 400)))
+    sd_sphere(1);
+};
+
+at_t(23)
+opaque(vec3(1)) {
+    map_t(5, 6, 0, 1)
+    start_at_t(0)
+    end_at_t(1)
+    scale(1 - $t)
+    platform(3, 20);
+};
+
+let(float, move_out, 14)
+let(vec3, start_pos, vec3(13, 0, 13))
+let(vec3, middle_pos, vec3(30, 0, 30))
+let(vec3, end_pos, vec3(40, 16, 0))
+opaque(0,0,0) {
+    cond($t <= move_out + 2)
+    map_t(move_out, move_out + 2, 0, 1)
+    start_at_t(0) end_at_t(1)
+    vat(mix(start_pos, middle_pos, $t)) miniplatform();
+
+    cond($t > move_out + 2)
+    map_t(move_out + 2, move_out + 2 + 5, 0, 1)
+    start_at_t(0) end_at_t(1)
+    vat(mix(middle_pos, end_pos, $t)) miniplatform();
+};
+
+opaque(vec3(1)) 
+at_t(23)
+cond($t > fire - 2)
+{
+    map_t(fire - 2, fire - 1, 0, 1)
+    cond($t <= 1)
+    start_at_t(0) end_at_t(1) {
+        torus(2 * $t, 15 + 15 * $t);
+    };
+
+    map_t(fire - 1, fire, 0, 1)
+    cond($t > 0)
+    start_at_t(0) end_at_t(1) {
+        at(0, 10 * $t, 0)
+        torus(2, 30);
+
+        at(0, -10 * $t, 0)
+        torus(2, 30);
+    };
+};
+
+camera {
+    keyframe(0) {
+        pos(10,5,0);
+        look_at(0,4,0);
+    };
+
+    keyframe(3, +);
+
+    keyframe(3, +) {
+        look_at(13,4,13);
+    };
+
+    keyframe(5, +) {
+        pos(13, 4, 13);
+        look_at(20, 5, 20);
+    };
+
+    keyframe(1, +) {
+        look_at(20, 5, 0);
+    };
+
+    keyframe(1, +) {
+        look_at(0, 5, 0);
+    };
+
+    keyframe(1, +);
+
+    keyframe(2, +) {
+        pos(30, 4, 30);
+    };
+
+    keyframe(5, +) {
+        pos(40, 20, 0);
+    };
+
+    keyframe(1, +);
+
+    keyframe(1, +) {
+        pos(37, 20, 0);
+    };
+
+    keyframe(54);
+};

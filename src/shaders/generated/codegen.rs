@@ -58,6 +58,11 @@ impl Function {
         ident
     }
 
+    pub fn add_definition(&mut self, typ: impl ToString, name: impl ToString, expr: impl ToString) {
+        let def = format!("{} {} = {};", typ.to_string(), name.to_string(), expr.to_string());
+        self.definitions.push(def);
+    }
+
     pub fn ret(self, glsl: &mut Glsl, expr: impl ToString) {
         let args = self
             .args
@@ -102,6 +107,12 @@ impl ArgString {
     pub fn new(s: impl Into<String>, arg: impl Into<String>) -> Self {
         let string = s.into().replace("$", &(arg.into() + "."));
         ArgString(string)
+    }
+}
+
+impl AsRef<str> for ArgString {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 

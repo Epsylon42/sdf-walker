@@ -173,13 +173,14 @@ impl Statement {
             static ref SIMPLE_FUNCTIONS: HashSet<&'static str> = {
                 let simple_functions = [
                     "at",
+                    "vat",
                     "rotate",
                     "repeat",
                     "at_t",
                     "start_at_t",
                     "end_at_t",
                     "repeat_t",
-                    "map_t"
+                    "map_t",
                 ];
 
                 simple_functions.iter()
@@ -256,6 +257,26 @@ impl Statement {
                 assert!(self.args.len() == 1);
                 vis.construct_transform(
                     Scale {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
+            "cond" => {
+                assert!(self.args.len() == 1);
+                vis.construct_transform(
+                    Cond {
+                        args: self.args.clone(),
+                    },
+                    vis.construct_fold(Union, vis.visit_body(self)?),
+                )
+            }
+
+            "let" => {
+                assert_eq!(self.args.len(), 3);
+                vis.construct_transform(
+                    Let {
                         args: self.args.clone(),
                     },
                     vis.construct_fold(Union, vis.visit_body(self)?),

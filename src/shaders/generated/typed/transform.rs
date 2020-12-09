@@ -158,3 +158,33 @@ impl ITransform for AdvancedRepeat {
         repeat.make_expr(ctx, func)
     }
 }
+
+#[derive(Debug)]
+pub struct Cond {
+    pub args: Vec<String>,
+}
+
+impl ITransform for Cond {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _typ: TypeMarker) -> glsl::Expr {
+        let inside = inside.make_expr(ctx, func).to_string();
+
+        ArgString::new(format!("(({cond}) ? ({obj}) : (1.0/0.0))", cond = self.args[0], obj = inside), &ctx.arg).into()
+    }
+}
+
+#[derive(Debug)]
+pub struct Let {
+    pub args: Vec<String>
+}
+
+impl ITransform for Let {
+    fn wrap(&self, ctx: &Context, func: &mut glsl::Function, inside: &impl MakeExpr, _typ: TypeMarker) -> glsl::Expr {
+        let typ = &self.args[0];
+        let name = &self.args[1];
+        let value = ArgString::new(&self.args[2], &ctx.arg);
+
+        func.add_definition(typ, name, value.as_ref());
+
+        inside.make_expr(ctx, func)
+    }
+}
