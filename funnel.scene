@@ -152,11 +152,24 @@ opaque(vec3(1)) {
 
 at_t(23)
 opaque(vec3(1)) {
-    map_t(5, 6, 0, 1)
+    cond($t <= fire - 1)
+    map_t(4, 5, 0, 1)
     start_at_t(0)
-    end_at_t(1)
-    scale(1 - $t)
-    platform(3, 20);
+    let(float, platform_outer_increase, clamp($t*10 - 8, 0, 10))
+    platform(10 + min($t*8, 8) + platform_outer_increase, 20 + platform_outer_increase);
+
+    cond($t > fire - 1)
+    {
+        map_t(fire - 1, fire, 0, 1)
+        cond($t > 0)
+        start_at_t(0) end_at_t(1) {
+            at(0, 10 * $t, 0)
+            platform(28, 30);
+
+            at(0, -10 * $t, 0)
+            platform(28, 30);
+        }
+    }
 }
 
 let(float, move_out, 14)
@@ -173,27 +186,6 @@ opaque(0,0,0) {
     map_t(move_out + 2, move_out + 2 + 5, 0, 1)
     start_at_t(0) end_at_t(1)
     vat(mix(middle_pos, end_pos, $t)) miniplatform();
-}
-
-opaque(vec3(1)) 
-at_t(23)
-cond($t > fire - 2)
-{
-    map_t(fire - 2, fire - 1, 0, 1)
-    cond($t <= 1)
-    start_at_t(0) end_at_t(1) {
-        torus(2 * $t, 15 + 15 * $t);
-    }
-
-    map_t(fire - 1, fire, 0, 1)
-    cond($t > 0)
-    start_at_t(0) end_at_t(1) {
-        at(0, 10 * $t, 0)
-        torus(2, 30);
-
-        at(0, -10 * $t, 0)
-        torus(2, 30);
-    }
 }
 
 camera {
