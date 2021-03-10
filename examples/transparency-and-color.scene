@@ -1,0 +1,65 @@
+define_geometry(cylinder, float r) {
+    raw(length($p.xz) - r);
+};
+
+define_geometry(torus, float r, float R) {
+    let(vec2, q, vec2(length($p.xz) - R, $p.y))
+    raw(length(q) - r);
+}
+
+opaque(vec3(1))
+at(20,0,0)
+rotate(vec3(-1,0,1), 6.28 / 6) {
+    intersection {
+        sd_box(vec3(20));
+        difference {
+            cylinder(10 + $p.y / 10);
+            cylinder(8 + $p.y / 8);
+        }
+    }
+
+    at(0,-30,0) sd_box(vec3(10,0.5,20));
+}
+
+transparent(0,1,1, 0.05)
+at(20,0,0)
+rotate(vec3(-1,0,1), 6.28 / 6)
+intersection {
+    sd_box(vec3(20));
+    cylinder(8 + $p.y / 8);
+}
+
+
+at(0,20,40)
+transparent(1,0,1, 1) {
+    at($t * 10, 0, 0)
+    at(0, 20 + 5 * sin($p.x / 5 + 2), 0)
+    rotate(vec3(0,0,1), 6.28 / 4)
+    cylinder(1);
+
+    rotate(vec3(0,0,1), 6.28 / 4)
+    cylinder(1);
+}
+
+let(vec2, p, floor($p.xz / 10))
+let(vec2, rand, fract(sin(vec2( dot(p, vec2(1, 57)), dot(p, vec2(57, 1)) )) * 43758.5457))
+at(0, -20, 0)
+opaque(rand.x, rand.y, length(rand)) {
+    sd_halfspace_aa(vec3(0,1,0));
+}
+
+at(60,0,0) 
+opaque(0.5, 0, 0.5)
+{
+    rotate(vec3(0,0,1), $p.x / 20)
+    torus(1, 5);
+}
+
+camera {
+    keyframe(0) {
+        pos(50, 20, -20);
+        look_at(0, 0, 0);
+    }
+
+    keyframe(5);
+}
