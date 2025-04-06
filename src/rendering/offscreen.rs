@@ -1,3 +1,6 @@
+#[cfg(target_family = "unix")]
+use glutin::platform::unix::EventLoopExtUnix;
+
 use super::*;
 
 impl CtxDetails for GlutinOffscreen {
@@ -20,7 +23,7 @@ where
     pub fn to_image(&mut self) -> image::RgbImage {
         let color = self.bb.color_slot().get_raw_texels().unwrap();
         let image = image::RgbaImage::from_raw(self.size[0], self.size[1], color).unwrap();
-        image::DynamicImage::ImageRgba8(image).flipv().to_rgb()
+        image::DynamicImage::ImageRgba8(image).flipv().to_rgb8()
     }
 }
 
@@ -28,7 +31,11 @@ pub fn new_app_offscreen(
     size: [u32; 2],
     scene: SceneDesc,
 ) -> (App<GlutinOffscreen, pixel::NormRGBA8UI>, EventLoop<()>) {
+    #[cfg(target_family = "unix")]
+    let el = EventLoop::new_x11().unwrap();
+    #[cfg(not(target_family = "unix"))]
     let el = EventLoop::new();
+
     let ctx_builder = glutin::ContextBuilder::new();
 
     let mut surface = GlutinOffscreen::new_gl33_from_builder(&el, ctx_builder).unwrap();

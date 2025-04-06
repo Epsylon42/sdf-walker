@@ -19,6 +19,9 @@ use std::error;
 use std::fmt;
 use std::os::raw::c_void;
 
+#[cfg(target_family = "unix")]
+use glutin::platform::unix::EventLoopExtUnix;
+
 /// Error that might occur when creating a Glutin surface.
 #[derive(Debug)]
 pub enum GlutinError {
@@ -110,6 +113,9 @@ impl GlutinSurface {
     CB:
       FnOnce(&mut EventLoop<()>, ContextBuilder<'a, NotCurrent>) -> ContextBuilder<'a, NotCurrent>,
   {
+    #[cfg(target_family = "unix")]
+    let mut event_loop = EventLoop::new_x11().unwrap();
+    #[cfg(not(target_family = "unix"))]
     let mut event_loop = EventLoop::new();
 
     let window_builder = window_builder(&mut event_loop, WindowBuilder::new());
