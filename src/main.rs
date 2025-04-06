@@ -1,6 +1,3 @@
-#![feature(or_patterns)]
-#![feature(box_syntax)]
-
 extern crate nalgebra_glm as glm;
 #[macro_use] extern crate lazy_static;
 

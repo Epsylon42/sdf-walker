@@ -347,27 +347,27 @@ impl StatementVisitor for GeometryVisitor {
     }
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
-        box NamedGeometry { name, args }
+        Box::new(NamedGeometry { name, args })
     }
 
     fn construct_raw(&self, expr: String) -> Self::Output {
-        box RawGeometry { expr }
+        Box::new(RawGeometry { expr })
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold {
+        Box::new(Fold {
             func,
             items,
             marker: GeometryMarker,
-        }
+        })
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform {
+        Box::new(Transform {
             tf,
             item,
             marker: GeometryMarker,
-        }
+        })
     }
 }
 
@@ -380,27 +380,27 @@ impl StatementVisitor for OpaqueVisitor {
     }
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
-        box NamedOpaqueShape { name, args }
+        Box::new(NamedOpaqueShape { name, args })
     }
 
     fn construct_raw(&self, expr: String) -> Self::Output {
-        box RawOpaque { expr }
+        Box::new(RawOpaque { expr })
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold {
+        Box::new(Fold {
             func,
             items,
             marker: OpaqueMarker,
-        }
+        })
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform {
+        Box::new(Transform {
             tf,
             item,
             marker: OpaqueMarker,
-        }
+        })
     }
 
     fn construct_opaque(
@@ -408,7 +408,7 @@ impl StatementVisitor for OpaqueVisitor {
         color: Vec<String>,
         geometry: impl IGeometry,
     ) -> Result<Self::Output, StatementError> {
-        Ok(box OpaqueShape { color, geometry })
+        Ok(Box::new(OpaqueShape { color, geometry }))
     }
 }
 
@@ -421,30 +421,30 @@ impl StatementVisitor for TransparentVisitor {
     }
 
     fn construct_named(&self, name: String, args: Vec<String>) -> Self::Output {
-        box NamedTransparentShape { name, args }
+        Box::new(NamedTransparentShape { name, args })
     }
 
     fn construct_raw(&self, expr: String) -> Self::Output {
-        box RawTransparent { expr }
+        Box::new(RawTransparent { expr })
     }
 
     fn construct_fold(&self, func: impl IFunc, items: Vec<Self::Output>) -> Self::Output {
-        box Fold {
+        Box::new(Fold {
             func,
             items,
             marker: TransparentMarker
-        }
+        })
     }
 
     fn construct_transform(&self, tf: impl ITransform, item: Self::Output) -> Self::Output {
-        box Transform {
+        Box::new(Transform {
             tf,
             item,
             marker: TransparentMarker,
-        }
+        })
     }
 
     fn construct_transparent(&self, color: Vec<String>, geometry: impl IGeometry) -> Result<Self::Output, StatementError> {
-        Ok(box TransparentShape { color, geometry })
+        Ok(Box::new(TransparentShape { color, geometry }))
     }
 }
